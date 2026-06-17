@@ -16,7 +16,7 @@ class ticketera
 
 
         // URL a la que deseas hacer la solicitud
-        $url = 'https://fowl-sacred-strangely.ngrok-free.app/print_script/public/';
+        $url = 'https://fowl-sacred-strSDADAS/print_script/public/';
 
 
 
@@ -73,7 +73,7 @@ class ticketera
         $fecha_impresion = date('d/m/Y h:ia');
 
         // URL a la que deseas hacer la solicitud
-        $url = 'https://fowl-sacred-strangely.ngrok-free.app/print_script/public/_grupal';
+        $url = 'https://fowl-sacred-strSDADAS/print_script/public/_grupal';
 
         // Datos que deseas enviar en la solicitud POST
         $postData = array(
@@ -131,7 +131,7 @@ class ticketera
 
 
         // URL a la que deseas hacer la solicitud
-        $url = 'https://fowl-sacred-strangely.ngrok-free.app/print_script/public/impresion_gastos';
+        $url = 'https://fowl-sacred-strSDADAS/print_script/public/impresion_gastos';
 
 
 
@@ -183,7 +183,7 @@ class ticketera
         $fecha_impresion = date('d/m/Y h:ia');
 
         // URL a la que deseas hacer la solicitud
-        $url = 'https://fowl-sacred-strangely.ngrok-free.app/print_script/public/imprimir_desembolso';
+        $url = 'https://fowl-sacred-strSDADAS/print_script/public/imprimir_desembolso';
 
 
 
@@ -240,7 +240,7 @@ class ticketera
     {
 
         // URL a la que deseas hacer la solicitud
-        $url = 'https://fowl-sacred-strangely.ngrok-free.app/print_script/public/impresion_gastos';
+        $url = 'https://fowl-sacred-strSDADAS/print_script/public/impresion_gastos';
 
         // Datos que deseas enviar en la solicitud POST
         $postData = array(
@@ -282,7 +282,7 @@ class ticketera
         // Cerrar la conexión cURL
         curl_close($ch);
 
-        // // echo($response ); 
+        // // echo($response );
     }
 
     public static function impresion_voucher_prestamo_cancelado(
@@ -304,7 +304,7 @@ class ticketera
     ) {
 
         // Base URL a la que deseas hacer la solicitud
-        $baseUrl = 'https://fowl-sacred-strangely.ngrok-free.app/print_script/public/impresion_voucher_prestamo_cancelado';
+        $baseUrl = 'https://fowl-sacred-strSDADAS/print_script/public/impresion_voucher_prestamo_cancelado';
 
         // Datos que deseas enviar como parámetros en la solicitud GET
         $getData = array(
@@ -345,7 +345,7 @@ class ticketera
             echo 'Error: ' . curl_error($ch);
         } else {
             // Imprimir la respuesta (puedes procesarla según sea necesario)
-            
+
         }
 
         // Cerrar la conexión cURL
