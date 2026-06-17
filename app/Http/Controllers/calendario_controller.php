@@ -27,7 +27,7 @@ class calendario_controller extends Controller
     public function load_calendar()
     {
         try {
-
+            $events = [];
             $query = prestamo::with([
                 "solicitud" => function ($query) {
                     $query->with([
@@ -36,7 +36,7 @@ class calendario_controller extends Controller
                 },
                 "analista"
             ])->where("status", "A");
- 
+
             $query = $query->get();
 
             $cronograma = $query;

@@ -312,11 +312,7 @@
                                         name="frecuencia_pagos" value="Mensual">
                                     <label class="form-check-label" for="Mensual">Mensual</label>
                                 </div>
-                                <div class="form-check mr-2 mt-2 sm:mt-0">
-                                    <input id="Anual" v-model="frecuencia_pagos" class="form-check-input" type="radio"
-                                        name="frecuencia_pagos" value="Anual">
-                                    <label class="form-check-label" for="Anual">Anual</label>
-                                </div>
+
                             </div>
                         </div>
                         <div class="intro-y col-span-12 mr-4 lg:col-span-6">
