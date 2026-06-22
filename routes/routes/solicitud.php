@@ -39,3 +39,4 @@ Route::put("/editar_solicitud", [App\Http\Controllers\SolicitudController::class
 Route::put("/edit_documento", [App\Http\Controllers\SolicitudController::class, 'edit_documento'])->name('edit_documento'); 
 
 // todo los delete
+Route::post('/eliminar_solicitud', [App\Http\Controllers\SolicitudController::class, 'eliminar_solicitud'])->name('eliminar_solicitud');

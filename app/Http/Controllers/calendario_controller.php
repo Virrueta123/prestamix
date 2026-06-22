@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\cronograma;
-use App\Models\prestamo;
+use App\Models\Prestamo;
 use App\Utils\funciones;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -28,7 +28,7 @@ class calendario_controller extends Controller
     {
         try {
             $events = [];
-            $query = prestamo::with([
+            $query = Prestamo::with([
                 "solicitud" => function ($query) {
                     $query->with([
                         "cliente"

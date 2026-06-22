@@ -12,8 +12,9 @@ use App\Models\Cliente;
 use App\Models\cronograma;
 use App\Models\gastos;
 use App\Models\guardar_documento;
+use App\Models\ingreso;
 use App\Models\pagos;
-use App\Models\prestamo;
+use App\Models\Prestamo;
 use App\Models\Solicitud;
 use App\Models\tipo_gasto;
 use App\Models\User;
@@ -88,14 +89,14 @@ class SolicitudController extends Controller
 
             // ACTUALIZACION EL PRESTAMO ANTERIOR PARA SE RESTABLESCA
             $solicitud_anterior = Solicitud::where('solicitud_id', $solicitud_actual->solicitud_id_relacionado)->first();
-            $prestamo_anterior = prestamo::where("prestamo_id", $solicitud_anterior->prestamo_id)->first();
+            $prestamo_anterior = Prestamo::where("prestamo_id", $solicitud_anterior->prestamo_id)->first();
 
 
             $prestamo_anterior->status = "A";
             $prestamo_anterior->save();
 
             // ACTUALIZACION EL PRESTAMO ACTUAL PARA SE ELIMINE
-            $prestamo_actual = prestamo::where("prestamo_id",$solicitud_actual->prestamo_id)->first();
+            $prestamo_actual = Prestamo::where("prestamo_id",$solicitud_actual->prestamo_id)->first();
             $prestamo_actual->delete();
             $solicitud_actual->delete();
 
@@ -332,6 +333,7 @@ class SolicitudController extends Controller
                 'solicitud_referencia_cliente' => 'required|string',
                 'solicitud_conyugue_ruc' => 'nullable|numeric',
                 'solicitud_documento' => 'required|numeric',
+                'cronograma' => 'required|array|min:1',
             ], $messages);
 
             if ($validator->fails()) {
@@ -397,19 +399,28 @@ class SolicitudController extends Controller
                 $prestamo->tasa_diaria = $request->input('tasa_diaria');
                 $prestamo->is_fecha_pago = $request->input('is_fecha_pago') ? "A" : "N";
                 $prestamo->fecha_de_pago_cuota = $request->input('is_fecha_pago') ? $request->input('fecha_de_pago_cuota') : NULL;
+                $prestamo->status = "A";
                 $prestamo->save();
 
-                $solicitud->prestamo_id =  $prestamo->prestamo_id;
+                $solicitud->prestamo_id = $prestamo->prestamo_id;
+                $solicitud->status = "G";
                 $solicitud->save();
 
+                $this->procesarAmpliacionSiAplica($solicitud);
+
+                if (!$this->insertarCronograma($prestamo->prestamo_id, $Params['cronograma'])) {
+                    return response()->json([
+                        'message' => 'Error al generar el cronograma de pagos',
+                        'error' => '',
+                        'success' => false,
+                        'data' => '',
+                    ]);
+                }
 
                 $ruta = asset("/") . 'solicitud/' . Encryptor::encrypt($solicitud->solicitud_id);
 
-                //enviar a la cola de trabajo
-                // enviar_mail_solicitud::dispatch($ruta, $get_cliente);
-
                 send_email_controller::send_email_ingreso_creado(
-                    Auth::user()->name . " " . Auth::user()->last_name . " genero una solicitud con un monto de credito de"
+                    Auth::user()->name . " " . Auth::user()->last_name . " genero un prestamo con un monto de credito de"
                         . $prestamo->moto_credito .
                         " con "
                         . $prestamo->interes .
@@ -418,14 +429,13 @@ class SolicitudController extends Controller
                         " "
                         . funciones::frecuencia_a($prestamo->frecuencia_pagos) .
                         "",
-                    "Solicitud creada",
+                    "Prestamo creado",
                 );
 
-
-                session()->flash('success', 'Solicitud registrado correctamente');
+                session()->flash('success', 'Prestamo creado correctamente');
 
                 return response()->json([
-                    'message' => 'Solicitud registrado correctamente',
+                    'message' => 'Prestamo creado correctamente',
                     'error' => '',
                     'success' => true,
                     'data' => $ruta,
@@ -621,40 +631,10 @@ class SolicitudController extends Controller
             // Actualizar el estado de la solicitud a "G" (Aceptado)
             $solicitud->status = "G";
 
-            //actualizar al prestamo a aceptado
-            $prestamo  = prestamo::where("solicitud_id", $solicitud->solicitud_id)->first();
+            $prestamo = Prestamo::where("solicitud_id", $solicitud->solicitud_id)->first();
             $prestamo->status = "A";
 
-            $gasto = new gastos();
-            $gasto->gastos_descripcion = "Desembolso de la solicitud N° {$solicitud->code}";
-            $gasto->solicitud_id = $solicitud->solicitud_id;
-            $gasto->monto = $solicitud->tipo_solicitud == "Ampliacion" ? $solicitud->prestamo->monto_ampliacion : $solicitud->prestamo->moto_credito;
-            $gasto->tipo_gasto_id = tipo_gasto::where("yes_default", "Y")->first()->tipo_gasto_id;
-            $gasto->created_user = auth()->user()->id;
-            $gasto->sucursal_id = auth()->user()->sucursal_id;
-            $gasto->caja_chica_id = caja::where("created_user", 1)->where("status", "A")->first()->caja_chica_id;
-            $gasto->save();
-
-            $pagos = new pagos();
-            $pagos->gastos_id = $gasto->gastos_id;
-            $pagos->monto = $gasto->monto;
-            $pagos->cuentas_id = 1;
-            $pagos->tipo = "G";
-            $pagos->caja_chica_id = caja::where("created_user", 1)->where("status", "A")->first()->caja_chica_id;
-            $pagos->created_user  = auth()->user()->id;
-            $pagos->sucursal_id  = auth()->user()->sucursal_id;
-            $pagos->save();
-
-
-
-            $show_gasto = gastos::with(["tipo_gasto"])->find($gasto->gastos_id);
-
-
-
-
-            // Si la solicitud no se guarda, devolver un mensaje de error
             if (!$solicitud->save()) {
-
                 return response()->json([
                     'message' => 'error al procesar esta solicitud',
                     'error' => '',
@@ -664,55 +644,9 @@ class SolicitudController extends Controller
             }
             $prestamo->save();
 
+            $this->procesarAmpliacionSiAplica($solicitud);
 
-            if ($solicitud->tipo_solicitud == "Ampliacion") {
-                $solicitud_anterior =  Solicitud::with("prestamo")->findOrFail($solicitud->solicitud_id_relacionado);
-
-                $prestamo_anterior = prestamo::find($solicitud_anterior->prestamo_id);
-                $prestamo_anterior->status = "N";
-                $prestamo_anterior->save();
-            }
-
-
-            // Recorrer los datos del cronograma
-            $index = 0;
-            foreach ($Params["cronograma"] as $cronograma) {
-
-                $fecha = $cronograma["fechaVencimiento"];
-
-                // Crear un objeto DateTime a partir de la fecha en el formato de entrada
-                $fecha_objeto = DateTime::createFromFormat('d/n/Y', $fecha);
-
-                // Formatear la fecha al formato deseado "15/04/2024"
-                $fecha_formateada = $fecha_objeto->format('Y-m-d');
-
-                if ($index == 0) {
-                    $cronogramasData[] = [
-                        'amortizacion' => $cronograma["amortizacion"],
-                        'cuota' => $cronograma["cuota"],
-                        'fechaVencimiento' => $fecha_formateada,
-                        'interes' => $cronograma["interes"],
-                        'periodo' => $cronograma["periodo"],
-                        'saldoCapital' => $cronograma["saldoCapital"],
-                        'prestamo_id' => $solicitud->prestamo->prestamo_id,
-                        'status' => "P"
-                    ];
-                    $index++;
-                } else {
-                    $cronogramasData[] = [
-                        'amortizacion' => $cronograma["amortizacion"],
-                        'cuota' => $cronograma["cuota"],
-                        'fechaVencimiento' => $fecha_formateada,
-                        'interes' => $cronograma["interes"],
-                        'periodo' => $cronograma["periodo"],
-                        'saldoCapital' => $cronograma["saldoCapital"],
-                        'prestamo_id' => $solicitud->prestamo->prestamo_id,
-                        'status' => "N"
-                    ];
-                }
-            }
-            // Insertar los datos del cronograma en la base de datos
-            $created_cronograma = cronograma::insert($cronogramasData);
+            $created_cronograma = $this->insertarCronograma($solicitud->prestamo->prestamo_id, $Params["cronograma"]);
 
             // Si la inserción del cronograma tiene éxito, devolver un mensaje de éxito
             if ($created_cronograma) {
@@ -790,6 +724,10 @@ class SolicitudController extends Controller
                 $frecuencia_pago_a = "SEMANAS";
                 $frecuencia_pago_b = "SEMANALES";
                 break;
+            case 'Quincenal':
+                $frecuencia_pago_a = "QUINCENAS";
+                $frecuencia_pago_b = "QUINCENALES";
+                break;
         }
 
         $solicitud_documento = Blade::compileString(view(
@@ -815,7 +753,7 @@ class SolicitudController extends Controller
                 'destino' =>  $solicitud->prestamo->destino,
                 'analista' => $solicitud->analista->name . " " . $solicitud->analista->lastname,
                 'nombre_conyugue' => $solicitud->solicitud_nombre_conyuge,
-                'nombre_empresa' => 'CASH TIME EIRL',
+                'nombre_empresa' => 'HORIZON FINANCE EIRL',
                 'direccion_empresa' => 'Jirón Bolognesi  N° 523 ',
                 'nombre_conyugue_empresa' => 'Olga Panduro Pinedo ',
                 'documento_empresa' => '20608330284',
@@ -989,7 +927,7 @@ class SolicitudController extends Controller
             $Params = $request->all();
             $solicitud = Solicitud::find(Encryptor::decrypt($Params['urlapi']));
 
-            $prestamo = prestamo::find($solicitud->prestamo_id);
+            $prestamo = Prestamo::find($solicitud->prestamo_id);
 
             $prestamo_get = $Params['prestamo'];
 
@@ -1017,6 +955,107 @@ class SolicitudController extends Controller
                     'data' => '',
                 ]);
             }
+        } catch (\Throwable $th) {
+            Log::error($th->getMessage());
+            return response()->json([
+                'message' => 'error del servidor',
+                'error' => $th->getMessage(),
+                'success' => false,
+                'data' => '',
+            ]);
+        }
+    }
+
+    private function procesarAmpliacionSiAplica(Solicitud $solicitud): void
+    {
+        if ($solicitud->tipo_solicitud == "Ampliacion" && $solicitud->solicitud_id_relacionado) {
+            $solicitud_anterior = Solicitud::with("prestamo")->findOrFail($solicitud->solicitud_id_relacionado);
+            $prestamo_anterior = Prestamo::find($solicitud_anterior->prestamo_id);
+            if ($prestamo_anterior) {
+                $prestamo_anterior->status = "N";
+                $prestamo_anterior->save();
+            }
+        }
+    }
+
+    private function insertarCronograma(int $prestamoId, array $cronogramaParams): bool
+    {
+        $cronogramasData = [];
+        $index = 0;
+
+        foreach ($cronogramaParams as $cronograma) {
+            $fecha = $cronograma["fechaVencimiento"];
+            $fecha_objeto = DateTime::createFromFormat('d/n/Y', $fecha);
+
+            if (!$fecha_objeto) {
+                $fecha_objeto = DateTime::createFromFormat('d/m/Y', $fecha);
+            }
+
+            if (!$fecha_objeto) {
+                return false;
+            }
+
+            $cronogramasData[] = [
+                'amortizacion' => $cronograma["amortizacion"],
+                'cuota' => $cronograma["cuota"],
+                'fechaVencimiento' => $fecha_objeto->format('Y-m-d'),
+                'interes' => $cronograma["interes"],
+                'periodo' => $cronograma["periodo"],
+                'saldoCapital' => $cronograma["saldoCapital"],
+                'prestamo_id' => $prestamoId,
+                'status' => $index === 0 ? "P" : "N",
+            ];
+            $index++;
+        }
+
+        return cronograma::insert($cronogramasData);
+    }
+
+    public function eliminar_solicitud(Request $request)
+    {
+        try {
+            $solicitudId = Encryptor::decrypt($request->input('urlapi'));
+            $solicitud = Solicitud::find($solicitudId);
+
+            if (!$solicitud) {
+                return response()->json([
+                    'message' => 'Solicitud no encontrada',
+                    'success' => false,
+                    'data' => '',
+                ]);
+            }
+
+            $prestamo = Prestamo::where('solicitud_id', $solicitudId)->first();
+
+            if ($prestamo) {
+                if (ingreso::where('prestamo_id', $prestamo->prestamo_id)->exists()) {
+                    return response()->json([
+                        'message' => 'No se puede eliminar: el préstamo tiene pagos registrados',
+                        'success' => false,
+                        'data' => '',
+                    ]);
+                }
+
+                cronograma::where('prestamo_id', $prestamo->prestamo_id)->delete();
+                $prestamo->delete();
+            }
+
+            if (gastos::where('solicitud_id', $solicitudId)->exists()) {
+                return response()->json([
+                    'message' => 'No se puede eliminar: tiene gastos de desembolso asociados',
+                    'success' => false,
+                    'data' => '',
+                ]);
+            }
+
+            guardar_documento::where('solicitud_id', $solicitudId)->delete();
+            $solicitud->delete();
+
+            return response()->json([
+                'message' => 'Solicitud eliminada correctamente',
+                'success' => true,
+                'data' => '',
+            ]);
         } catch (\Throwable $th) {
             Log::error($th->getMessage());
             return response()->json([

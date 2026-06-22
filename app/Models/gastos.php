@@ -33,7 +33,7 @@ class gastos extends Model
     }
 
     public function sucursal(){
-        return $this->belongsTo(sucursal::class,'sucursal_id');
+        return $this->belongsTo(Sucursal::class,'sucursal_id');
     }
 
     public function getPagoAttribute()

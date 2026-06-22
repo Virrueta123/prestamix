@@ -47,8 +47,11 @@
                 <a :href="'/solicitud/' + get_solicitud.urlapi" class="btn btn-eye  mr-1 mb-2">
                     <Icon icon='eye' class='mr-2' /> Ver Solicitud
                 </a>
+                <button @click="eliminar_solicitud_tabla(get_solicitud, table_solicitud)" class="btn btn-danger mr-1 mb-2">
+                    <Icon icon='trash' class='mr-2' /> Eliminar solicitud
+                </button>
 
-            </div>  
+            </div>
         </Sidebar>
 
 </template>
@@ -103,7 +106,8 @@ export default {
             select_name: "",
             search_input: "",
             is_opciones_modal: false,
-            get_solicitud: null
+            get_solicitud: null,
+            table_solicitud: null
         }
     },
     methods: {
@@ -116,7 +120,7 @@ export default {
             });
             var self = this;
  
-            var table = $('#table_solicitud_rechazado').DataTable({
+            this.table_solicitud = $('#table_solicitud_rechazado').DataTable({
                 language: this.spanish_datatable,
                 ajax: {
                     url: '/tabla_solicitud_rechazado_data',
@@ -180,7 +184,7 @@ export default {
             var self = this;
             $('#table_solicitud_rechazado tbody').on('dblclick', 'tr', function () {
                 
-                var data = table.row(this).data();
+                var data = self.table_solicitud.row(this).data();
                 self.is_opciones_modal = true;
                 self.get_solicitud = data 
             });

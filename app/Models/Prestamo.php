@@ -8,9 +8,14 @@ use DateTime;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class prestamo extends Model
+class Prestamo extends Model
 {
     use HasFactory;
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\PrestamoFactory::new();
+    }
     protected $table = "prestamos";
     public $timestamps = true;
     protected $primaryKey = 'prestamo_id';
@@ -25,7 +30,7 @@ class prestamo extends Model
     {
         parent::boot();
         static::creating(function ($modelo) {
-            $Prestamo = prestamo::max('serie');
+            $Prestamo = Prestamo::max('serie');
             if (is_null($Prestamo)) {
                 $Prestamo = 1;
             } else {

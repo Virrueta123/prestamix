@@ -695,6 +695,10 @@ export default {
                     this.frecuencia_pagos_a = "Semanas";
                     break;
 
+                case "Quincenal":
+                    this.frecuencia_pagos_a = "Quincenas";
+                    break;
+
                 case "Mensual":
                     this.frecuencia_pagos_a = "Meses";
                     break;
@@ -841,7 +845,7 @@ export default {
                 text: mensaje,
                 icon: "warning",
                 showCancelButton: true,
-                confirmButtonColor: "#3085d6",
+                confirmButtonColor: "#0039A6",
                 cancelButtonColor: "#d33",
                 confirmButtonText: "Si, desembolsar"
             }).then((result) => {
@@ -980,6 +984,14 @@ export default {
 
                 case "Semanal":
                     this.cronograma = this.calcularAmortizacionFrancesSemanal(
+                        parseInt(String(this.get.prestamo.moto_credito).replace(/,/g, '')),
+                        parseInt(this.get.prestamo.intervalo),
+                        parseInt(this.get.prestamo.interes),
+                    );
+                    break;
+
+                case "Quincenal":
+                    this.cronograma = this.calcularAmortizacionFrancesQuincenal(
                         parseInt(String(this.get.prestamo.moto_credito).replace(/,/g, '')),
                         parseInt(this.get.prestamo.intervalo),
                         parseInt(this.get.prestamo.interes),
@@ -1459,6 +1471,10 @@ export default {
 
                 case "Semanal":
                     this.frecuencia_pagos_a = "Semanas";
+                    break;
+
+                case "Quincenal":
+                    this.frecuencia_pagos_a = "Quincenas";
                     break;
 
                 case "Mensual":

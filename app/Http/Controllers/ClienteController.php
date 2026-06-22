@@ -6,6 +6,7 @@ use App\Helpers\Encryptor;
 use App\Models\Cliente;
 use App\Models\ContactosCliente;
 use App\Models\ingreso;
+use App\Models\Prestamo;
 use App\Models\Solicitud;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -317,6 +318,103 @@ class ClienteController extends Controller
                     'data' => '',
                 ]);
             }
+        } catch (\Throwable $th) {
+            Log::error($th->getMessage());
+            return response()->json([
+                'message' => 'error del servidor',
+                'error' => $th->getMessage(),
+                'success' => false,
+                'data' => '',
+            ]);
+        }
+    }
+
+    public function prestamos_activos_cliente(Request $request)
+    {
+        try {
+            $cliId = Encryptor::decrypt($request->input('urlapi'));
+            $prestamos = Prestamo::with('solicitud')
+                ->where('cli_id', $cliId)
+                ->where('status', 'A')
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'code' => $p->solicitud->code ?? $p->code,
+                        'monto' => $p->moto_credito,
+                        'estado' => 'Activo',
+                    ];
+                });
+
+            return response()->json([
+                'message' => 'Préstamos activos del cliente',
+                'success' => true,
+                'data' => [
+                    'total' => $prestamos->count(),
+                    'prestamos' => $prestamos,
+                ],
+            ]);
+        } catch (\Throwable $th) {
+            Log::error($th->getMessage());
+            return response()->json([
+                'message' => 'error del servidor',
+                'success' => false,
+                'data' => '',
+            ]);
+        }
+    }
+
+    public function eliminar_cliente(Request $request)
+    {
+        try {
+            $Params = $request->all();
+            $cliId = Encryptor::decrypt($Params['urlapi']);
+            $cliente = Cliente::find($cliId);
+
+            if (!$cliente) {
+                return response()->json([
+                    'message' => 'Cliente no encontrado',
+                    'error' => '',
+                    'success' => false,
+                    'data' => '',
+                ]);
+            }
+
+            if (Solicitud::where('cli_id', $cliId)->exists()) {
+                return response()->json([
+                    'message' => 'No se puede eliminar: el cliente tiene solicitudes registradas',
+                    'error' => '',
+                    'success' => false,
+                    'data' => '',
+                ]);
+            }
+
+            if (Prestamo::where('cli_id', $cliId)->exists()) {
+                return response()->json([
+                    'message' => 'No se puede eliminar: el cliente tiene préstamos registrados',
+                    'error' => '',
+                    'success' => false,
+                    'data' => '',
+                ]);
+            }
+
+            if (ingreso::where('cli_id', $cliId)->exists()) {
+                return response()->json([
+                    'message' => 'No se puede eliminar: el cliente tiene ingresos registrados',
+                    'error' => '',
+                    'success' => false,
+                    'data' => '',
+                ]);
+            }
+
+            ContactosCliente::where('cli_id', $cliId)->delete();
+            $cliente->delete();
+
+            return response()->json([
+                'message' => 'Cliente eliminado correctamente',
+                'error' => '',
+                'success' => true,
+                'data' => '',
+            ]);
         } catch (\Throwable $th) {
             Log::error($th->getMessage());
             return response()->json([

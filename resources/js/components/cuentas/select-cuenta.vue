@@ -22,9 +22,6 @@ export default {
             default: this.$attrs.default || null
         }
     },
-    mounted() {
-        this.initSelect();
-    },
     watch: {
 
     },
@@ -81,12 +78,13 @@ export default {
                 }
             });
 
-            this.select_cuenta.setValue(data[0].urlapi);
             if (this.default) {
-                this.select_cuenta.setValue(this.default) 
+                this.select_cuenta.setValue(this.default);
+                this.$emit("comunicarCuenta", this.default);
+            } else if (data.length > 0) {
+                this.select_cuenta.setValue(data[0].urlapi);
+                this.$emit("comunicarCuenta", data[0].urlapi);
             }
-
-            this.$emit("comunicarCuenta", data[0].urlapi);
             this.select_cuenta.on('change', this.change_select_cuenta);
         }
 

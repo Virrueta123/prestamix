@@ -13,7 +13,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 <head>
     <meta charset="utf-8">
-    <link href="{{ asset('dist/images/logo/logo.svg') }}" rel="shortcut icon">
+    <link href="{{ asset('images/isotipo_horizon.png') }}" rel="shortcut icon" type="image/png">
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description"

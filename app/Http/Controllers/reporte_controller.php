@@ -7,7 +7,7 @@ use App\Models\caja;
 use App\Models\gastos;
 use App\Models\ingreso;
 use App\Models\pagos;
-use App\Models\prestamo;
+use App\Models\Prestamo;
 use App\Models\Solicitud;
 use App\Models\tipo_gasto;
 use App\Utils\funciones;
@@ -22,7 +22,7 @@ class reporte_controller extends Controller
     {
         try {
 
-            $query = prestamo::with([
+            $query = Prestamo::with([
                 "solicitud",
                 "analista"
             ])->where("status", "A");

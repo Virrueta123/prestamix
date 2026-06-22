@@ -17,7 +17,7 @@ License: You must have a valid license purchased only from themeforest(the above
         <meta name="description" content="Midone admin is super flexible, powerful, clean & modern responsive tailwind admin template with unlimited possibilities.">
         <meta name="keywords" content="admin template, Midone Admin Template, dashboard template, flat admin template, responsive admin template, web app">
         <meta name="author" content="LEFT4CODE">
-        <title>CashTime</title>
+        <title>Horizon Finance</title>
         <!-- BEGIN: CSS Assets-->
         <link rel="stylesheet" href="{{ asset("dist/css/app.css") }}" />
         <!-- END: CSS Assets-->

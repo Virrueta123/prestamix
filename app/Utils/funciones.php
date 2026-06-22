@@ -80,6 +80,8 @@ class funciones
                 return 'Semanas';
             case 'Mensual':
                 return 'Meses';
+            case 'Quincenal':
+                return 'Quincenas';
         }
     }
 

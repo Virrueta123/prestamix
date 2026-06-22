@@ -1,5 +1,5 @@
 <template>
-    <div class=" box">
+    <div class="box w-full max-w-full mx-auto solicitud-form-mobile">
         <Toast />
 
         <div class="flex flex-col sm:flex-row items-center p-5 border-b border-slate-200/60 dark:border-darkmode-400">
@@ -56,9 +56,9 @@
             </div>
         </div>
         <form id="add_solicitud" action="#" method="POST">
-            <div id="input" class="p-5">
+            <div id="input" class="p-5" :class="{ 'cliente-dropdown-open': clienteDropdownOpen }">
 
-                <div>
+                <div class="cliente-select-wrapper">
                     <label for="regular-form-1" class="form-label">Buscar Cliente</label>
                     <div class="input-group mt-2">
 
@@ -71,7 +71,13 @@
                     </div>
                 </div>
 
-                <div class=" " v-if="is_solicitud">
+                <div v-if="!is_solicitud" class="solicitud-empty-state box mt-4 pt-5 pb-5">
+                    <center>
+                        <img class="card-img-top" width="38%" src="../../../../public/dist/images/Draw/schedule.svg" alt="">
+                    </center>
+                </div>
+
+                <div class="solicitud-form-content" v-if="is_solicitud">
                     <div
                         class="flex flex-col sm:flex-row items-center pt-5 pb-5 border-b border-b border-slate-200/60 dark:border-darkmode-400">
                         <h2 class="font-medium text-base mr-auto">
@@ -298,8 +304,13 @@
                             <label>Frecuencia de los pagos </label>
                             <div class="flex flex-col sm:flex-row mt-4">
                                 <div class="form-check mr-2 sm:mt-0">
+                                    <input id="Quincenal" class="form-check-input" type="radio" name="frecuencia_pagos"
+                                        checked v-model="frecuencia_pagos" value="Quincenal">
+                                    <label class="form-check-label" for="Quincenal">Quincenal</label>
+                                </div>
+                                <div class="form-check mr-2 mt-2 sm:mt-0">
                                     <input id="Diario" class="form-check-input" type="radio" name="frecuencia_pagos"
-                                        checked v-model="frecuencia_pagos" value="Diario">
+                                        v-model="frecuencia_pagos" value="Diario">
                                     <label class="form-check-label" for="Diario">Diario</label>
                                 </div>
                                 <div class="form-check mr-2 mt-2 sm:mt-0">
@@ -493,20 +504,13 @@
                     </div>
                 </div>
 
-                <button v-if="is_cronograma" type="submit" class="btn btn-primary btn-block btn-flotante btn-xs  ">Crear
-                    Solicitud</button>
+                <button v-if="is_cronograma" type="submit" class="btn btn-primary btn-block btn-flotante btn-xs">Crear préstamo</button>
 
             </div>
 
         </form>
 
 
-    </div>
-
-    <div v-if="!is_solicitud" class="box mt-4 pt-5 pb-5">
-        <center>
-            <img class="card-img-top" width="38%" src="../../../../public/dist/images/Draw/schedule.svg" alt="">
-        </center>
     </div>
 
     <!-- Modal para crear un cliente nuevo -->
@@ -753,6 +757,7 @@ export default {
             get_cliente: null,
             // variables para la solicitud
             is_solicitud: false,
+            clienteDropdownOpen: false,
             tipo_solicitud: "Nuevo",
             tipo_vivienda: "Propia",
             analista_id: null,
@@ -772,14 +777,14 @@ export default {
             solicitud_conyugue_ruc: "",
             solicitud_tarjeta: '',
             solicitud_entidad_tarjeta: '',
-            monto_credito: 0,
+            monto_credito: 1000,
             tasa_diaria: 0,
             cuotas: 0,
             cuota_final: 0,
             fecha_desembolso: null,
-            frecuencia_pagos: "Diario",
-            frecuencia_pagos_a: "Dias",
-            interes: 0,
+            frecuencia_pagos: "Quincenal",
+            frecuencia_pagos_a: "Quincenas",
+            interes: 20,
             intervalo: 0,
             is_cronograma: false,
             cronograma: [],
@@ -792,6 +797,9 @@ export default {
     watch: {
         frecuencia_pagos(newVal, oldVal) {
             switch (newVal) {
+                case "Quincenal":
+                    this.frecuencia_pagos_a = "Quincenas";
+                    break;
                 case "Diario":
                     this.frecuencia_pagos_a = "Dias";
                     break;
@@ -1147,6 +1155,11 @@ export default {
 
         },
         send_solicitud() {
+            if (!this.is_cronograma || this.cronograma.length === 0) {
+                this.alert_warning("Primero debe calcular el cronograma de pagos");
+                return;
+            }
+
             const data = {
                 cliente: this.get_cliente.urlapi,
                 tipo_solicitud: this.tipo_solicitud,
@@ -1179,6 +1192,7 @@ export default {
                 solicitud_tarjeta: this.solicitud_tarjeta,
                 solicitud_entidad_tarjeta: this.solicitud_entidad_tarjeta,
                 solicitud_paralelo: this.solicitudparalelo == '' ? '' : this.solicitudparalelo.urlapi,
+                cronograma: this.cronograma,
             };
 
             const headers = this.headers;
@@ -1242,7 +1256,26 @@ export default {
                     console.error(error);
                 });
         },
+        verificarPrestamosActivos(urlapi) {
+            Axios.post("/prestamos_activos_cliente", { urlapi }, { headers: this.headers })
+                .then((response) => {
+                    if (response.data.success && response.data.data.total > 0) {
+                        const lista = response.data.data.prestamos.map((p) =>
+                            `${p.code} - S/. ${p.monto} (${p.estado})`
+                        ).join('<br>');
+                        this.$swal.fire({
+                            icon: 'warning',
+                            title: 'Este cliente ya tiene préstamos activos',
+                            html: `<p>Tiene <strong>${response.data.data.total}</strong> préstamo(s) activo(s):</p><div class="text-left text-sm">${lista}</div>`,
+                            confirmButtonText: 'Entendido',
+                        });
+                    }
+                });
+        },
         change_select_cliente(urlapi) {
+            if (!urlapi) {
+                return;
+            }
             const data = {
                 urlapi: urlapi,
             };
@@ -1283,6 +1316,8 @@ export default {
                         this.is_solicitud = true;
                         this.is_modal_add_cliente = false;
 
+                        this.verificarPrestamosActivos(urlapi);
+
                         if (this.get_cliente.ultimasolicitud != null) {
                             this.tipo_vivienda = this.get_cliente.ultimasolicitud.tipo_vivienda ?? "Propia";
                             this.destino = this.get_cliente.ultimasolicitud.destino ?? "NO REFIERE";
@@ -1297,8 +1332,8 @@ export default {
                             this.solicitud_referencia_cliente = this.get_cliente.ultimasolicitud.solicitud_referencia_cliente ?? "NO REFIERE";
                             this.solicitud_domicilio = this.get_cliente.ultimasolicitud.solicitud_domicilio ?? "NO REFIERE";
                             this.solicitud_nombre_conyugue = this.get_cliente.ultimasolicitud.solicitud_nombre_conyugue ?? "NO REFIERE";
-                            this.solicitud_conyugue_dni = this.get_cliente.ultimasolicitud.solicitud_conyugue_dni ?? "NO REFIERE";
-                            this.solicitud_conyugue_ruc = this.get_cliente.ultimasolicitud.solicitud_conyugue_ruc ?? "NO REFIERE";
+                            this.solicitud_conyugue_dni = "";
+                            this.solicitud_conyugue_ruc = "";
                         } else {
                             this.tipo_vivienda = "Propia";
                             this.destino = "NO REFIERE";
@@ -1407,6 +1442,14 @@ export default {
                         parseInt(this.intervalo),
                         parseInt(this.interes)
                     )
+                    break;
+
+                case "Quincenal":
+                    this.cronograma = this.calcularAmortizacionFrancesQuincenal(
+                        this.monto_credito,
+                        parseInt(this.intervalo),
+                        parseInt(this.interes)
+                    );
                     break;
 
                 case "Mensual":
@@ -1664,6 +1707,8 @@ export default {
             labelField: 'name',
             searchField: 'name',
             options: [],
+            dropdownParent: 'body',
+            maxOptions: 10,
             render: {
                 option: function (item, escape) {
 
@@ -1722,7 +1767,21 @@ export default {
         });
 
         this.select_cliente.on('change', this.change_select_cliente);
+        this.select_cliente.on('dropdown_open', () => {
+            this.clienteDropdownOpen = true;
+        });
+        this.select_cliente.on('dropdown_close', () => {
+            this.clienteDropdownOpen = false;
+        });
 
+        Axios.post("/search_cliente_select", { search: '' }, { headers: this.headers })
+            .then((response) => {
+                if (response.data.success) {
+                    response.data.data.forEach((cliente) => {
+                        this.select_cliente.addOption(cliente);
+                    });
+                }
+            });
 
         if (self.solicitudparalelo != '') {
             this.select_cliente.addOption(self.solicitudparalelo.cliente);
@@ -1736,6 +1795,40 @@ export default {
 </script>
 
 <style>
+.cliente-select-wrapper {
+    position: relative;
+    overflow: visible;
+}
+.cliente-dropdown-open {
+    padding-bottom: 18rem;
+}
+.solicitud-empty-state,
+.solicitud-form-content {
+    position: relative;
+    z-index: 1;
+}
+.solicitud-form-mobile .ts-wrapper,
+.solicitud-form-mobile .ts-control,
+.solicitud-form-mobile .input-group,
+.solicitud-form-mobile .table {
+    max-width: 100%;
+}
+.solicitud-form-mobile .ts-wrapper.dropdown-active {
+    z-index: 60;
+}
+@media (max-width: 640px) {
+    .solicitud-form-mobile .report-box-1 .box {
+        flex-direction: column;
+    }
+    .solicitud-form-mobile .input-group {
+        flex-wrap: nowrap;
+    }
+    .solicitud-form-mobile .btn-flotante {
+        width: calc(100% - 2rem);
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
 .thead-fixed {
     position: sticky;
     top: 0;

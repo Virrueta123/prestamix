@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link href="{{ public_path('dist/images/logo/logo.svg') }}" rel="shortcut icon">
-    <title>Cash Time</title>
+    <title>Horizon Finance</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap');
 
@@ -143,7 +143,7 @@
                 <tspan class="text-negrita-2">{{ $documento }}</tspan> con domicilio en el {{ $direccion }},
                 {{ $distrito }}, Distrito,
                 Provincia de {{ $provincia }}, Departamento de {{ $departamento }}, en este acto,
-                recibo en calidad de prestado, de la Empresa <tspan class="text-negrita-2">CASH TIME E.I.R.L</tspan>,
+                recibo en calidad de prestado, de la Empresa <tspan class="text-negrita-2">HORIZON FINANCE E.I.R.L</tspan>,
                 representada por la señora Olga Panduro
                 Pinedo, con un poder inscrito en registros públicos con partida N° 11179962 la suma de <tspan
                     class="text-negrita-2">S/. {{ $monto_credito }}</tspan> ({{ $monto_credito_deletreado }}), dinero
@@ -544,7 +544,7 @@
         <div class="text-normal" style="text-align: justify;">
             <text x="0" y="0" textAnchor="start">
                 Constes por el presente documents el contrato de mutuo que celebran de una parte <tspan
-                    class="text-negrita">CASH TIME EIRL</tspan>, con RUC
+                    class="text-negrita">HORIZON FINANCE EIRL</tspan>, con RUC
                 N° <tspan class="text-negrita">20608330284</tspan>, con domicilio fiscal en el Jirón Bolognesi N°
                 523
                 del distrito de Tarapoto – San Martín

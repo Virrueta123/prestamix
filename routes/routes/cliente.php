@@ -13,3 +13,7 @@ Route::get('/cliente/{urlapi}', [App\Http\Controllers\ClienteController::class, 
 
 //  put
  Route::put('/editar_cliente', [App\Http\Controllers\ClienteController::class, 'editar_cliente'])->name('editar_cliente');
+
+// delete
+Route::post('/eliminar_cliente', [App\Http\Controllers\ClienteController::class, 'eliminar_cliente'])->name('eliminar_cliente');
+Route::post('/prestamos_activos_cliente', [App\Http\Controllers\ClienteController::class, 'prestamos_activos_cliente'])->name('prestamos_activos_cliente');

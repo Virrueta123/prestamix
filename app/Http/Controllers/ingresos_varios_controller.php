@@ -46,7 +46,15 @@ class ingresos_varios_controller extends Controller
             $Params = $request->all(); 
             $ingresos_varios = new ingreso();
             $ingresos_varios->descripcion = $Params['descripcion'];
-            $ingresos_varios->cuentas_id = Encryptor::decrypt($Params['cuentas_id']);
+            $cuentasId = Encryptor::decrypt($Params['cuentas_id']);
+            if ($cuentasId <= 0) {
+                return response()->json([
+                    'message' => 'Debe seleccionar una cuenta válida',
+                    'success' => false,
+                    'data' => '',
+                ]);
+            }
+            $ingresos_varios->cuentas_id = $cuentasId;
             $ingresos_varios->monto = $Params['monto'];
             $ingresos_varios->created_user = Auth::user()->id;
             $ingresos_varios->sucursal_id = Auth::user()->sucursal_id;
@@ -66,7 +74,7 @@ class ingresos_varios_controller extends Controller
             $pagos = new pagos();
             $pagos->ingreso_id = $ingresos_varios->ingreso_id;
             $pagos->monto = $Params['monto'];
-            $pagos->cuentas_id = 1;
+            $pagos->cuentas_id = $cuentasId;
             $pagos->tipo = "I";
             $pagos->caja_chica_id = caja::where("created_user", auth()->user()->id)->where("status", "A")->first()->caja_chica_id;
             $pagos->created_user  = auth()->user()->id;

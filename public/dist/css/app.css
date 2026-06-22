@@ -4263,7 +4263,7 @@ select{
  */
 /* Default colors */
 :root {
-    --color-primary: 46 49 146;
+    --color-primary: 0 57 166;
     --color-secondary: 236 27 39;
     --color-success: 132 204 22;
     --color-info: 6 182 212;

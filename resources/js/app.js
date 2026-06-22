@@ -81,7 +81,9 @@ app.component('Icon', FontAwesomeIcon);
 app.component('TomSelect', TomSelect);
 app.component('Datepicker', Datepicker);
 
-app.use(VueSweetalert2);
+app.use(VueSweetalert2, {
+    confirmButtonColor: '#0039A6',
+});
 
 // importaciones primevue 
 app.use(Dialog);

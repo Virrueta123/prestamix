@@ -8,7 +8,7 @@ use App\Models\detalle_ingreso;
 use App\Models\gastos;
 use App\Models\ingreso;
 use App\Models\pagos;
-use App\Models\prestamo;
+use App\Models\Prestamo;
 use App\Models\Solicitud;
 use App\Utils\ticketera;
 use Carbon\Carbon;
@@ -41,7 +41,7 @@ class ingresos_controller extends Controller
 
             DB::beginTransaction();
             if ($ingreso->prestamo_cancelado == "Y") {
-                $prestamo = prestamo::find($ingreso->prestamo_id);
+                $prestamo = Prestamo::find($ingreso->prestamo_id);
 
                 $cronogramas = cronograma::where("prestamo_id", $prestamo->prestamo_id)->where('periodo', '>=', $prestamo->cuota_inicio)->get();
 
@@ -77,7 +77,7 @@ class ingresos_controller extends Controller
                 $cronograma = cronograma::where("cronograma_id", $detalle_ingresos->cronograma_id)->first();
                 $cronograma->yes_pago = "N";
 
-                $prestamo = prestamo::find($cronograma->prestamo_id);
+                $prestamo = Prestamo::find($cronograma->prestamo_id);
 
                 if ($cronograma->periodo == $prestamo->ncuotas) {
                     $prestamo->status = "A";
@@ -299,7 +299,7 @@ class ingresos_controller extends Controller
                         );
                     }
                 } else {
-                    $prestamo = prestamo::find($ingreso->prestamo_id);
+                    $prestamo = Prestamo::find($ingreso->prestamo_id);
                     $ingresos = ingreso::where("prestamo_id", $prestamo->prestamo_id)
                         ->where(
                             "ingreso_id",
@@ -379,11 +379,19 @@ class ingresos_controller extends Controller
 
 
             foreach ($Params["pagos"] as $pago) {
+                $cuentasId = Encryptor::decrypt($pago["cuentas_id"]);
+                if ($cuentasId <= 0) {
+                    return response()->json([
+                        'message' => 'Debe seleccionar una cuenta válida para el pago',
+                        'success' => false,
+                        'data' => '',
+                    ]);
+                }
 
                 if (isset($pago["urlapi"])) {
 
                     $pag = pagos::where("pagos_id", Encryptor::decrypt($pago["urlapi"]))->first();
-                    $pag->cuentas_id = Encryptor::decrypt($pago["cuentas_id"]);
+                    $pag->cuentas_id = $cuentasId;
                     $pag->monto = $pago["monto"];
                     $pag->save();
                 } else {
@@ -391,7 +399,7 @@ class ingresos_controller extends Controller
                     $pag = new pagos();
                     $pag->ingreso_id = Encryptor::decrypt($ingreso["urlapi"]);
                     $pag->monto = $pago["monto"];
-                    $pag->cuentas_id = Encryptor::decrypt($pago["cuentas_id"]);
+                    $pag->cuentas_id = $cuentasId;
                     $pag->tipo = "I";
                     $pag->caja_chica_id = $ingreso["caja_chica_id"];
                     $pag->created_user  = auth()->user()->id;

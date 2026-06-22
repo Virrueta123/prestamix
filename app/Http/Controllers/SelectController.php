@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\Encryptor;
 use App\Models\Cliente;
 use App\Models\cuentas;
-use App\Models\sucursal;
+use App\Models\Sucursal;
 use App\Models\ubigueo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,12 +18,18 @@ class SelectController extends Controller
         try {
             $Params = $request->all();
 
-            $search = Cliente::select("*", DB::raw('cli_id AS id'), DB::raw("CONCAT(cli_nombre,' ', cli_apellido,'-',cli_dni) AS name"))
-                ->where('cli_nombre', 'like', '%' . $request->all()['search'] . '%')
-                ->orWhere('cli_apellido', 'like', '%' . $request->all()['search'] . '%')
-                ->orWhere('cli_dni', 'like', '%' . $request->all()['search'] . '%')
-                ->limit(8)
-                ->get();
+            $searchTerm = trim($request->input('search', ''));
+            $query = Cliente::select("*", DB::raw('cli_id AS id'), DB::raw("CONCAT(cli_nombre,' ', cli_apellido,'-',cli_dni) AS name"));
+
+            if ($searchTerm !== '') {
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('cli_nombre', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('cli_apellido', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('cli_dni', 'like', '%' . $searchTerm . '%');
+                });
+            }
+
+            $search = $query->orderBy('created_at', 'desc')->limit(10)->get();
 
             return response()->json([
                 'message' => 'Datos cargados correctamente',
@@ -121,7 +127,7 @@ class SelectController extends Controller
     {
         try {
 
-            $sucursal = sucursal::where("status", "A")->get();
+            $sucursal = Sucursal::where("status", "A")->get();
 
             return response()->json([
                 'message' => 'Cuentas cargados correctamente',

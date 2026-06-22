@@ -9,7 +9,7 @@ use App\Models\cronograma;
 use App\Models\cuentas;
 use App\Models\gastos;
 use App\Models\ingreso;
-use App\Models\prestamo;
+use App\Models\Prestamo;
 use App\Models\salario;
 use App\Models\Solicitud;
 use App\Models\solicitud_trabajador;
@@ -219,7 +219,7 @@ class tables_controller extends Controller
 
         if ($request->ajax()) {
 
-            $query = prestamo::with([
+            $query = Prestamo::with([
                 "solicitud" => function ($query) {
                     $query->with([
                         "cliente" => function ($query) {

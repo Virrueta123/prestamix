@@ -553,6 +553,10 @@ export default {
                                     return `<div class="text-center"> M</div>`;
                                     break;
 
+                                case "Quincenal":
+                                    return `<div class="text-center"> Q</div>`;
+                                    break;
+
                             }
 
                             return `<div class="text-center"> ${data} %</div>`;

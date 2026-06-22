@@ -90,8 +90,8 @@
                                 <tbody>
                                     <tr v-for="(pago, index_pago) in pagos" :key="index_pago">
                                         <td>{{ pago.numero }}</td>
-                                        <td> <select-cuenta v-on:change="change_cuenta(index_pago, $event)"
-                                                @comunicarCuenta="escucharCuenta" v-model="cuentas_id"></select-cuenta>
+                                        <td> <select-cuenta
+                                                @comunicarCuenta="(value) => escucharCuenta(index_pago, value)"></select-cuenta>
                                         </td>
                                         <td>
                                             <InputNumber class="form-control p-2 border border-success" type="number"
@@ -186,7 +186,7 @@ export default {
             if (newValue > 0) {
                 this.pagos[0] = {
                     numero: 1,
-                    cuentas_id: "MFNhZTlXUkhTSmpWNDQ5ZUc2YUhldz09",
+                    cuentas_id: this.pagos[0]?.cuentas_id || "",
                     monto: parseFloat(newValue)
                 };
             }
@@ -237,12 +237,15 @@ export default {
             this.pagos.splice(index, 1);
             
         },
+        escucharCuenta(index, value) {
+            this.pagos[index].cuentas_id = value;
+        },
         agregar_cuenta() {
             if (this.pagos.length < 2) {
                 this.is_btn_pagos = false;
                 this.pagos.push({
                     numero: 2,
-                    cuentas_id: "MFNhZTlXUkhTSmpWNDQ5ZUc2YUhldz09",
+                    cuentas_id: "",
                     monto: this.monto - this.pagos[0].monto
                 });
             }
@@ -255,11 +258,6 @@ export default {
             } else {
                 this.is_btn_pagos = true;
             }
-        },
-        change_cuenta(index, evento) {
-            this.pagos[index].cuentas_id = evento.target.value;
-            console.log(this.pagos[index]);
-
         },
         // Your methods here
         crear_gasto() {

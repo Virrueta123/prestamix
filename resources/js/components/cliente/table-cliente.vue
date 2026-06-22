@@ -42,11 +42,20 @@
            
             <a :href="'/cliente/' + get_cliente.urlapi" class="btn btn-eye  mr-1 mb-2">
                 <Icon icon='eye' class='mr-2 text-info' /> Ver cliente
-            </a> 
+            </a>
+            <button @click="abrirEditar()" class="btn btn-warning mr-1 mb-2">
+                <Icon icon='pen' class='mr-2' /> Editar cliente
+            </button>
+            <button @click="eliminarCliente()" class="btn btn-danger mr-1 mb-2">
+                <Icon icon='trash' class='mr-2' /> Eliminar cliente
+            </button>
         </div>
-
-
     </Sidebar>
+
+    <Dialog v-model:visible="is_edit_modal" header="Editar cliente" :style="{ width: '90vw' }" modal>
+        <edit-cliente v-if="cliente_edit" :get_cliente="cliente_edit"
+            @comunicarEditarCliente="escucharEditarCliente"></edit-cliente>
+    </Dialog>
 
 </template>
 
@@ -100,10 +109,72 @@ export default {
             select_name: "",
             search_input: "",
             is_opciones_modal: false,
-            get_cliente: null
+            is_edit_modal: false,
+            get_cliente: null,
+            cliente_edit: null,
+            table_cliente: null,
+            indice_table: null
         }
     },
     methods: {
+        abrirEditar() {
+            const data = { urlapi: this.get_cliente.urlapi };
+            const headers = this.headers;
+            this.loading_start();
+            Axios.post("/get_ciente", data, { headers })
+                .then((response) => {
+                    if (response.data.success) {
+                        this.cliente_edit = response.data.data;
+                        this.is_opciones_modal = false;
+                        this.is_edit_modal = true;
+                    } else {
+                        this.alert_warning(response.data.message);
+                    }
+                    this.loading_end();
+                })
+                .catch(() => {
+                    this.loading_end();
+                    this.alert_error_modal("Error al cargar el cliente");
+                });
+        },
+        escucharEditarCliente(cliente) {
+            if (this.table_cliente && this.indice_table !== null) {
+                this.table_cliente.row(this.indice_table).data(cliente);
+            }
+            this.is_edit_modal = false;
+        },
+        eliminarCliente() {
+            const self = this;
+            this.$swal({
+                title: '¿Eliminar cliente?',
+                text: `${this.get_cliente.cli_nombre} ${this.get_cliente.cli_apellido}`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const data = { urlapi: self.get_cliente.urlapi };
+                    const headers = self.headers;
+                    self.loading_start();
+                    Axios.post("/eliminar_cliente", data, { headers })
+                        .then((response) => {
+                            if (response.data.success) {
+                                self.alert_success(response.data.message);
+                                self.is_opciones_modal = false;
+                                self.table_cliente.ajax.reload(null, false);
+                            } else {
+                                self.alert_warning(response.data.message);
+                            }
+                            self.loading_end();
+                        })
+                        .catch(() => {
+                            self.loading_end();
+                            self.alert_error_modal("Error en el servidor");
+                        });
+                }
+            });
+        },
         async load_user_data() {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             $.ajaxSetup({
@@ -113,7 +184,7 @@ export default {
             });
             var self = this;
 
-            var table = $('#table_solicitud_trabajador').DataTable({
+            this.table_cliente = $('#table_solicitud_trabajador').DataTable({
                 language: this.spanish_datatable,
                 ajax: {
                     url: '/tabla_cliente_data',
@@ -185,10 +256,10 @@ export default {
 
             var self = this;
             $('#table_solicitud_trabajador tbody').on('dblclick', 'tr', function () {
-
-                var data = table.row(this).data();
+                var data = self.table_cliente.row(this).data();
+                self.indice_table = self.table_cliente.row(this).index();
                 self.is_opciones_modal = true;
-                self.get_cliente = data
+                self.get_cliente = data;
             });
         },
 

@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Faker\Factory as Faker;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\prestamo>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Prestamo>
  */
-class prestamoFactory extends Factory
+class PrestamoFactory extends Factory
 {
     protected $model = Prestamo::class;
+
     /**
      * Define the model's default state.
      *
@@ -27,7 +28,7 @@ class prestamoFactory extends Factory
 
         $monto_credito = $faker->randomElement([1000, 2000, 3000,6000,8000,10000,20000,30000]);
 
-        $frecuencia_pagos = $faker->randomElement(['Diario', 'Mensual', 'Semanal']);
+        $frecuencia_pagos = 'Quincenal';
 
         $cuota = 0;
         switch ( $frecuencia_pagos) {
@@ -43,7 +44,11 @@ class prestamoFactory extends Factory
                 case 'Semanal':
                 $intervalo = 4;
                 $cuota = Formulas::calcularAmortizacionFrancesDiaria($monto_credito,$intervalo,$interes);
-                break; 
+                break;
+                case 'Quincenal':
+                $intervalo = 6;
+                $cuota = Formulas::calcularAmortizacionFrancesQuincenal($monto_credito, $intervalo, $interes);
+                break;
         }
 
         return [  

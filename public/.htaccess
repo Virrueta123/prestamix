@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Bloquear acceso web a carpetas de Laravel si estan dentro de public/
+    RewriteRule ^(app|bootstrap|config|database|lang|resources|routes|storage|tests|vendor)(/|$) - [F,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

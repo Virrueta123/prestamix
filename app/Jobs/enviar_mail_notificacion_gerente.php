@@ -50,7 +50,7 @@ class enviar_mail_notificacion_gerente implements ShouldQueue
                 "saludo" => Generales::saludo(),
                 "nombre" => $gerente->name . ' | ' . $gerente->lastname,
             ], function ($message) use ($destinatario) {
-                $message->to($destinatario)->subject('Notificacion de Cash Time');
+                $message->to($destinatario)->subject('Notificacion de Horizon Finance');
             });
         } 
     }

@@ -78,7 +78,7 @@
                 Mediante el presente documento, <tspan class="text-negrita">yo, SANDY RENGIFO RUIZ</tspan> con DNI Nº
                 <tspan class="text-negrita">45378385</tspan> con domicilio en el Jr. Los
                 Ángeles N° 774, Tarapoto, Distrito, Provincia de San Martin, Departamento de San Martin, en este acto,
-                recibo en calidad de prestado, de la Empresa <tspan class="text-negrita">CASH TIME E.I.R.L</tspan>,
+                recibo en calidad de prestado, de la Empresa <tspan class="text-negrita">HORIZON FINANCE E.I.R.L</tspan>,
                 representada por la señora Olga Panduro
                 Pinedo, con un poder inscrito en registros públicos con partida N° 11179962 la suma de <tspan
                     class="text-negrita">S/. 10,000.00</tspan> (

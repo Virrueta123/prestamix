@@ -623,6 +623,10 @@ export default {
                     this.frecuencia_pagos_a = "Semanas";
                     break;
 
+                case "Quincenal":
+                    this.frecuencia_pagos_a = "Quincenas";
+                    break;
+
                 case "Mensual":
                     this.frecuencia_pagos_a = "Menses";
                     break;
@@ -695,6 +699,15 @@ export default {
                         parseInt(this.interes)
                     );
                     this.frecuencia_pagos_a = "Semanas";
+                    break;
+
+                case "Quincenal":
+                    this.cronograma = this.calcularAmortizacionFrancesQuincenal(
+                        this.monto_credito,
+                        parseInt(this.intervalo),
+                        parseInt(this.interes)
+                    );
+                    this.frecuencia_pagos_a = "Quincenas";
                     break;
 
                 case "Mensual":
@@ -925,6 +938,10 @@ export default {
 
             case "Semanal":
                 this.frecuencia_pagos_a = "Semanas";
+                break;
+
+            case "Quincenal":
+                this.frecuencia_pagos_a = "Quincenas";
                 break;
 
             case "Mensual":

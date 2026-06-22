@@ -144,7 +144,7 @@ export default {
                 text: "Si cierras esta caja no podras agregar mas ingresos y gastos hasta crear una nueva caja",
                 icon: "warning",
                 showCancelButton: true,
-                confirmButtonColor: "#3085d6",
+                confirmButtonColor: "#0039A6",
                 cancelButtonColor: "#d33",
                 confirmButtonText: "Si, cerra esta caja"
             }).then((result) => {

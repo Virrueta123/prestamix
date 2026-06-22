@@ -216,6 +216,45 @@ class formulas
         return $amortizacionFrances;
     }
 
+    public static function calcularAmortizacionFrancesQuincenal_cronograma($fecha_inicio, $montoPrestamo, $plazoQuincenas, $tasaInteres)
+    {
+        $montoPrestamo = floatval(str_replace(",", "", $montoPrestamo));
+        $plazoQuincenas = floatval(str_replace(",", "", $plazoQuincenas));
+        $tasaInteres = floatval(str_replace(",", "", $tasaInteres));
+
+        $cuotaQuincenal = ($montoPrestamo * ($tasaInteres / 100) + $montoPrestamo) / $plazoQuincenas;
+        $interesQuincenal = ($montoPrestamo * ($tasaInteres / 100)) / $plazoQuincenas;
+        $amortizacionQuincenal = $cuotaQuincenal - $interesQuincenal;
+
+        $amortizacionFrances = [];
+        $saldoPendiente = $montoPrestamo;
+
+        for ($quincena = 1; $quincena <= $plazoQuincenas; $quincena++) {
+            $saldoPendiente -= $amortizacionQuincenal;
+
+            $fechaVencimiento = new DateTime($fecha_inicio);
+            $fechaVencimiento->add(new DateInterval('P' . ($quincena * 15) . 'D'));
+
+            if ($fechaVencimiento->format("w") == 0) {
+                $fechaVencimiento->modify("+1 day");
+            }
+
+            $pago = [
+                "status" => $quincena == 1 ? "P" : "N",
+                "periodo" => $quincena,
+                "fechaVencimiento" => $fechaVencimiento->format("Y-m-d"),
+                "saldoCapital" => number_format($saldoPendiente, 2, ".", ""),
+                "amortizacion" => number_format($amortizacionQuincenal, 2, ".", ""),
+                "interes" => number_format($interesQuincenal, 2, ".", ""),
+                "cuota" => number_format($cuotaQuincenal, 2, ".", ""),
+            ];
+
+            $amortizacionFrances[] = $pago;
+        }
+
+        return $amortizacionFrances;
+    }
+
     //cuotas
 
     public static function calcularAmortizacionFrancesMensual($montoPrestamo, $plazoMeses, $tasaInteresMensual)
@@ -328,6 +367,17 @@ class formulas
             $amortizacionFrances[] = $pago;
         }
         return str_replace(",", "", number_format($cuotaSemanal, 2)) ;
+    }
+
+    public static function calcularAmortizacionFrancesQuincenal($montoPrestamo, $plazoQuincenas, $tasaInteres)
+    {
+        $montoPrestamo = floatval(str_replace(",", "", $montoPrestamo));
+        $plazoQuincenas = floatval(str_replace(",", "", $plazoQuincenas));
+        $tasaInteres = floatval(str_replace(",", "", $tasaInteres));
+
+        $cuotaQuincenal = ($montoPrestamo * ($tasaInteres / 100) + $montoPrestamo) / $plazoQuincenas;
+
+        return str_replace(",", "", number_format($cuotaQuincenal, 2));
     }
 
     public static function calcularAmortizacionFrancesDiaria($montoPrestamo, $plazoDias, $tasaInteresDiaria)

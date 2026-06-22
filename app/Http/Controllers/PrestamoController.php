@@ -11,7 +11,7 @@ use App\Models\gastos;
 use App\Models\ingreso;
 use App\Models\mensajes_prestamo;
 use App\Models\pagos;
-use App\Models\prestamo;
+use App\Models\Prestamo;
 use App\Models\Solicitud;
 use App\Models\User;
 use App\Utils\Formulas;
@@ -129,7 +129,7 @@ class PrestamoController extends Controller
         try {
 
             $solicitud = Solicitud::find(Encryptor::decrypt($urlapi));
-            $prestamo = prestamo::find($solicitud->prestamo_id);
+            $prestamo = Prestamo::find($solicitud->prestamo_id);
             $prestamo->status = "N";
 
             if ($prestamo->save()) {
@@ -167,7 +167,7 @@ class PrestamoController extends Controller
         ])->find(Encryptor::decrypt($urlapi));
 
         /**/
-        $prestamo = prestamo::find($solicitud->prestamo_id);
+        $prestamo = Prestamo::find($solicitud->prestamo_id);
 
         if ($prestamo->intervalo == 1) {
 
@@ -284,7 +284,7 @@ class PrestamoController extends Controller
 
         if ($request->ajax()) {
 
-            $query = prestamo::with([
+            $query = Prestamo::with([
                 "solicitud" => function ($query) {
                     $query->with([
                         "cliente" => function ($query) {
@@ -397,7 +397,7 @@ class PrestamoController extends Controller
 
             // primero tengo que actulizar el prestamo a cancelado
             $prestamo_id = Encryptor::decrypt($Datax["prestamo"]);
-            $prestamo = prestamo::find($prestamo_id);
+            $prestamo = Prestamo::find($prestamo_id);
             $prestamo->status = "C";
             $prestamo->prestamo_cancelado = "Y";
             $prestamo->fecha_inicio = $fecha_inicio;
@@ -934,7 +934,7 @@ class PrestamoController extends Controller
                 }
 
                 $detalle_ingreso = detalle_ingreso::insert($detalle_ingresos);
-                $prestamo = prestamo::find($ingreso->prestamo_id);
+                $prestamo = Prestamo::find($ingreso->prestamo_id);
 
                 $periodo = cronograma::where("prestamo_id",  $prestamo->prestamo_id)->orderBy("periodo", "Desc")->first()->periodo;
 
@@ -1092,7 +1092,7 @@ class PrestamoController extends Controller
             $ingreso->save();
 
             if ($Params["is_cancelado"]) {
-                $prestamo = prestamo::find($Params['get_prestamo']['prestamo_id']);
+                $prestamo = Prestamo::find($Params['get_prestamo']['prestamo_id']);
                 $prestamo->status = "C";
                 $prestamo->save();
             }
@@ -1287,7 +1287,7 @@ class PrestamoController extends Controller
                 $solicitud->prestamo_id =  $prestamo->prestamo_id;
                 $solicitud->save();
 
-                $prestamo_anterior = prestamo::find($solicitud_anterior->prestamo_id);
+                $prestamo_anterior = Prestamo::find($solicitud_anterior->prestamo_id);
                 $prestamo_anterior->status = "N";
                 $prestamo_anterior->save();
 
@@ -1402,7 +1402,7 @@ class PrestamoController extends Controller
                 $solicitud->prestamo_id =  $prestamo->prestamo_id;
                 $solicitud->save();
 
-                $prestamo_anterior = prestamo::find($solicitud_anterior->prestamo_id);
+                $prestamo_anterior = Prestamo::find($solicitud_anterior->prestamo_id);
                 $prestamo_anterior->status = "N";
                 $prestamo_anterior->save();
 
@@ -1535,7 +1535,7 @@ class PrestamoController extends Controller
                 $solicitud->prestamo_id =  $prestamo->prestamo_id;
                 $solicitud->save();
 
-                // $prestamo_anterior = prestamo::find($solicitud_anterior->prestamo_id);
+                // $prestamo_anterior = Prestamo::find($solicitud_anterior->prestamo_id);
                 // $prestamo_anterior->status = "N";
                 // $prestamo_anterior->save();
 
@@ -1653,7 +1653,7 @@ class PrestamoController extends Controller
 
             if ($mensaje_prestamo->save()) {
 
-                $prestamo = prestamo::find(Encryptor::decrypt($Params['prestamo_urlapi']));
+                $prestamo = Prestamo::find(Encryptor::decrypt($Params['prestamo_urlapi']));
                 $prestamo->is_mensaje = "Y";
                 $prestamo->save();
 
@@ -1690,7 +1690,7 @@ class PrestamoController extends Controller
     {
         try {
             $Params = $request->all();
-            $mensaje_prestamo = mensajes_prestamo::where("prestamo_id", Encryptor::decrypt($Params['prestamo_urlapi']))->first();
+            $mensaje_prestamo = mensajes_Prestamo::where("prestamo_id", Encryptor::decrypt($Params['prestamo_urlapi']))->first();
 
             if ($mensaje_prestamo) {
                 return response()->json([
@@ -1724,7 +1724,7 @@ class PrestamoController extends Controller
         try {
             $id = Auth::user()->id;
 
-            $mensaje_prestamo = mensajes_prestamo::with(["prestamo" => function ($query) {
+            $mensaje_prestamo = mensajes_Prestamo::with(["prestamo" => function ($query) {
                 return $query->with(["solicitud" => function ($query) {
                     return $query->with(["cliente"]);
                 }]);
@@ -1758,7 +1758,7 @@ class PrestamoController extends Controller
         try {
             $id = Auth::user()->id;
 
-            $mensaje_prestamo = mensajes_prestamo::with(["prestamo" => function ($query) {
+            $mensaje_prestamo = mensajes_Prestamo::with(["prestamo" => function ($query) {
                 return $query->with(["solicitud" => function ($query) {
                     return $query->with(["cliente"]);
                 }]);
@@ -1793,7 +1793,7 @@ class PrestamoController extends Controller
 
             $Datax = $request->all();
 
-            $mensaje_prestamo = mensajes_prestamo::where("msj_prestamo_id", Encryptor::decrypt($Datax["id"]))->first();
+            $mensaje_prestamo = mensajes_Prestamo::where("msj_prestamo_id", Encryptor::decrypt($Datax["id"]))->first();
             $mensaje_prestamo->check_one_alert = "N";
 
             if ($mensaje_prestamo->save()) {
@@ -1828,7 +1828,7 @@ class PrestamoController extends Controller
 
             $Datax = $request->all();
 
-            $mensaje_prestamo = mensajes_prestamo::where("msj_prestamo_id", Encryptor::decrypt($Datax["id"]))->first();
+            $mensaje_prestamo = mensajes_Prestamo::where("msj_prestamo_id", Encryptor::decrypt($Datax["id"]))->first();
             $mensaje_prestamo->check_two_alert = "N";
             $mensaje_prestamo->status = "A";
 
@@ -1926,7 +1926,7 @@ class PrestamoController extends Controller
             $cronograma_id = Encryptor::decrypt($Params['cronograma_id']);
 
             if ($Params['ncuota'] == $Params['periodo']) {
-                $prestamo = prestamo::find(Encryptor::decrypt($Params['prestamo_id']));
+                $prestamo = Prestamo::find(Encryptor::decrypt($Params['prestamo_id']));
                 $prestamo->status = "C";
                 $prestamo->save();
             }
@@ -2086,7 +2086,7 @@ class PrestamoController extends Controller
             $Datax = $request->all();
             $solicitud = Solicitud::find(Encryptor::decrypt($Datax["urlapi"]));
 
-            $prestamo = prestamo::find($solicitud->prestamo_id);
+            $prestamo = Prestamo::find($solicitud->prestamo_id);
             $cronograma = cronograma::where("prestamo_id", $prestamo->prestamo_id)
                 ->orderBy('periodo') // Asegurar orden correcto
                 ->get();
@@ -2178,7 +2178,7 @@ class PrestamoController extends Controller
     {
         if ($request->ajax()) {
 
-            $query = mensajes_prestamo::with([
+            $query = mensajes_Prestamo::with([
                 "usuario"
             ])
                 ->orderBy('created_at', "desc")

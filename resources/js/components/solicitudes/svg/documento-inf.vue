@@ -64,7 +64,7 @@
             <div xmlns="http://www.w3.org/1999/xhtml" style="text-align: justify;">
                 <text x="0" y="0" textAnchor="start">
                     Constes por el presente documents el contrato de mutuo que celebran de una parte <tspan
-                        class="text-negrita">CASH TIME EIRL</tspan>, con RUC
+                        class="text-negrita">HORIZON FINANCE EIRL</tspan>, con RUC
                     N° <tspan class="text-negrita">20608330284</tspan>, con domicilio fiscal en el Jirón Bolognesi N°
                     523
                     del distrito de Tarapoto – San Martín

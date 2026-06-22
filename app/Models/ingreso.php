@@ -25,7 +25,7 @@ class ingreso extends Model
     }
 
     public function prestamo(){
-        return $this->belongsTo(prestamo::class,'prestamo_id');
+        return $this->belongsTo(Prestamo::class,'prestamo_id');
     }
 
     public function cliente(){

@@ -52,11 +52,20 @@ class gastos_controller extends Controller
             $pagos = pagos::where('gastos_id', Encryptor::decrypt($gasto["urlapi"]))->get();
               
             foreach ($Params["pagos"] as $pago) {
-             
+                $cuentasId = Encryptor::decrypt($pago["cuentas_id"]);
+                if ($cuentasId <= 0) {
+                    return response()->json([
+                        'message' => 'Debe seleccionar una cuenta válida para el pago',
+                        'error' => '',
+                        'success' => false,
+                        'data' => '',
+                    ]);
+                }
+
                 if(isset($pago["urlapi"])){
                   
                     $pag = pagos::where("pagos_id",Encryptor::decrypt($pago["urlapi"]))->first(); 
-                    $pag->cuentas_id = Encryptor::decrypt($pago["cuentas_id"]);
+                    $pag->cuentas_id = $cuentasId;
                     $pag->monto = $pago["monto"];
                     $pag->save(); 
                     
@@ -66,7 +75,7 @@ class gastos_controller extends Controller
                     $pag = new pagos();
                     $pag->gastos_id = Encryptor::decrypt($gasto["urlapi"]);
                     $pag->monto = $pago["monto"];
-                    $pag->cuentas_id = Encryptor::decrypt($pago["cuentas_id"]);
+                    $pag->cuentas_id = $cuentasId;
                     $pag->tipo = "G";
                     $pag->caja_chica_id = $gasto["caja_chica_id"];
                     $pag->created_user  = auth()->user()->id;
@@ -153,10 +162,19 @@ class gastos_controller extends Controller
                 );
 
                 foreach ($Params["pagos"] as $pago) {
+                    $cuentasId = Encryptor::decrypt($pago["cuentas_id"]);
+                    if ($cuentasId <= 0) {
+                        return response()->json([
+                            'message' => 'Debe seleccionar una cuenta válida para el pago',
+                            'error' => '',
+                            'success' => false,
+                            'data' => '',
+                        ]);
+                    }
                     $pagos = new pagos();
                     $pagos->gastos_id = $gasto->gastos_id;
                     $pagos->monto = $pago["monto"];
-                    $pagos->cuentas_id = Encryptor::decrypt($pago["cuentas_id"]);
+                    $pagos->cuentas_id = $cuentasId;
                     $pagos->tipo = "G";
                     $pagos->caja_chica_id = caja::where("created_user", auth()->user()->id)->where("status", "A")->first()->caja_chica_id;
                     $pagos->created_user  = auth()->user()->id;

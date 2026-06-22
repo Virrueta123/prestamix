@@ -309,6 +309,51 @@ export const myMixin = {
 
             return amortizacionFrances;
         },
+        // calcular cronograma quincenal
+        calcularAmortizacionFrancesQuincenal(montoPrestamo, plazoQuincenas, tasaInteres, fecha = "hoy") {
+            const cuotaQuincenal = ((montoPrestamo * parseFloat(tasaInteres / 100)) + montoPrestamo) / plazoQuincenas;
+            const fechaDesembolso = fecha == "hoy" ? moment().format("DD/M/YYYY") : moment(fecha).format("DD/M/YYYY");
+
+            if (fecha == "hoy") {
+                this.fecha_desembolso = moment().format("DD/M/YYYY");
+            }
+
+            const interesQuincenal = (montoPrestamo * (tasaInteres / 100)) / plazoQuincenas;
+            const amortizacionQuincenal = cuotaQuincenal - interesQuincenal;
+            const amortizacionFrances = [];
+            let saldoPendiente = montoPrestamo;
+
+            this.cuotas = this.redondear(cuotaQuincenal);
+            this.tasa_diaria = (tasaInteres / 30).toFixed(2);
+
+            for (let quincena = 1; quincena <= plazoQuincenas; quincena++) {
+                saldoPendiente = saldoPendiente - amortizacionQuincenal;
+
+                let fechaVencimiento;
+                if (fecha != "hoy") {
+                    fechaVencimiento = moment(fecha, "YYYY-MM-DD").add(quincena * 15, 'days');
+                } else {
+                    fechaVencimiento = moment(fechaDesembolso, "DD/M/YYYY").add(quincena * 15, 'days');
+                }
+
+                if (fechaVencimiento.day() === 0) {
+                    fechaVencimiento.add(1, 'days');
+                }
+
+                const pago = {
+                    periodo: quincena,
+                    fechaVencimiento: fechaVencimiento.format("DD/M/YYYY"),
+                    saldoCapital: saldoPendiente.toFixed(2),
+                    amortizacion: amortizacionQuincenal.toFixed(2),
+                    interes: interesQuincenal.toFixed(2),
+                    cuota: cuotaQuincenal.toFixed(2)
+                };
+
+                amortizacionFrances.push(pago);
+            }
+
+            return amortizacionFrances;
+        },
         // calcular cronograma diario
         calcularAmortizacionFrancesdiario(montoPrestamo, plazoDias, tasaInteresDiaria,fecha = "hoy") {
 
@@ -781,6 +826,38 @@ export const myMixin = {
                 title: message
             });
 
+        },
+        eliminar_solicitud_tabla(get_solicitud, tableInstance) {
+            const self = this;
+            this.$swal.fire({
+                title: '¿Eliminar solicitud?',
+                text: `${get_solicitud.code} - ${get_solicitud.solicitud_nombre}`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    self.loading_start();
+                    Axios.post('/eliminar_solicitud', { urlapi: get_solicitud.urlapi }, { headers: self.headers })
+                        .then((response) => {
+                            if (response.data.success) {
+                                self.alert_success(response.data.message);
+                                self.is_opciones_modal = false;
+                                if (tableInstance) {
+                                    tableInstance.ajax.reload(null, false);
+                                }
+                            } else {
+                                self.alert_warning(response.data.message);
+                            }
+                            self.loading_end();
+                        })
+                        .catch(() => {
+                            self.loading_end();
+                            self.alert_error_modal('Error en el servidor');
+                        });
+                }
+            });
         },
         alert_warning(message) {
 

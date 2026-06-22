@@ -7,6 +7,28 @@ define('LARAVEL_START', microtime(true));
 
 /*
 |--------------------------------------------------------------------------
+| Hosting: detectar raiz de Laravel
+|--------------------------------------------------------------------------
+|
+| Estructura normal:  /proyecto/vendor + /proyecto/public/index.php
+| Hosting restringido: /public/vendor + /public/app (todo dentro de public)
+|
+*/
+
+$laravelBase = is_file(__DIR__.'/vendor/autoload.php')
+    ? __DIR__
+    : dirname(__DIR__);
+
+if (! is_file($laravelBase.'/vendor/autoload.php')) {
+    http_response_code(500);
+    exit('No se encontro vendor/autoload.php. Sube vendor dentro de public/ o corrige la ruta del dominio.');
+}
+
+$_ENV['APP_BASE_PATH'] = $laravelBase;
+putenv('APP_BASE_PATH='.$laravelBase);
+
+/*
+|--------------------------------------------------------------------------
 | Check If The Application Is Under Maintenance
 |--------------------------------------------------------------------------
 |
@@ -16,7 +38,7 @@ define('LARAVEL_START', microtime(true));
 |
 */
 
-if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
+if (file_exists($maintenance = $laravelBase.'/storage/framework/maintenance.php')) {
     require $maintenance;
 }
 
@@ -31,7 +53,7 @@ if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php'))
 |
 */
 
-require __DIR__.'/../vendor/autoload.php';
+require $laravelBase.'/vendor/autoload.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -44,7 +66,7 @@ require __DIR__.'/../vendor/autoload.php';
 |
 */
 
-$app = require_once __DIR__.'/../bootstrap/app.php';
+$app = require_once $laravelBase.'/bootstrap/app.php';
 
 $kernel = $app->make(Kernel::class);
 

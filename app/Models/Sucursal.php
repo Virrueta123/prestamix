@@ -6,7 +6,7 @@ use App\Helpers\Encryptor;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class sucursal extends Model
+class Sucursal extends Model
 {
     use HasFactory;
     protected $table = 'sucursal';

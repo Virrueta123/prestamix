@@ -65,8 +65,13 @@
                             <label>Frecuencia de los pagos </label>
                             <div class="flex flex-col sm:flex-row mt-4">
                                 <div class="form-check sm:mt-0">
+                                    <input id="Quincenal" class="form-check-input" type="radio" name="frecuencia_pagos"
+                                        checked v-model="frecuencia_pagos" value="Quincenal">
+                                    <label class="form-check-label" for="Quincenal">Quincenal</label>
+                                </div>
+                                <div class="form-check mr-2 mt-2 sm:mt-0">
                                     <input id="Diario" class="form-check-input" type="radio" name="frecuencia_pagos"
-                                        checked v-model="frecuencia_pagos" value="Diario">
+                                        v-model="frecuencia_pagos" value="Diario">
                                     <label class="form-check-label" for="Diario">Diario</label>
                                 </div>
                                 <div class="form-check mr-2 mt-2 sm:mt-0">
@@ -360,8 +365,8 @@ export default {
             cuotas: 0,
             cuota_final: 0,
             fecha_desembolso: null,
-            frecuencia_pagos: "Mensual",
-            frecuencia_pagos_a: "Meses",
+            frecuencia_pagos: "Quincenal",
+            frecuencia_pagos_a: "Quincenas",
             interes: 15,
             intervalo: 3,
             is_cronograma: false,
@@ -430,7 +435,9 @@ export default {
         'frecuencia_pagos': function (newValue) {
             this.is_boton = false;
             switch (newValue) {
-
+                case "Quincenal":
+                    this.frecuencia_pagos_a = "Quincenas";
+                    break;
                 case "Diario":
                     this.frecuencia_pagos_a = "Dias";
                     break;
@@ -505,6 +512,15 @@ export default {
                         parseInt(this.interes),
                         this.fecha
                     )
+                    break;
+
+                case "Quincenal":
+                    this.cronograma = this.calcularAmortizacionFrancesQuincenal(
+                        this.monto_credito,
+                        parseInt(this.intervalo),
+                        parseInt(this.interes),
+                        this.fecha
+                    );
                     break;
 
                 case "Mensual":

@@ -93,6 +93,8 @@ Auth::routes();
 
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home.index');
 
+Route::post('/notificaciones_prestamos', [App\Http\Controllers\HomeController::class, 'notificaciones_prestamos'])->name('notificaciones_prestamos');
+
 
 Route::get('/simulacion', [App\Http\Controllers\PrestamoController::class, 'simulacion'])->name('simulacion');
 
