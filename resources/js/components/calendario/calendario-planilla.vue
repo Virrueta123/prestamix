@@ -259,19 +259,24 @@ export default {
         }
     },
     mounted() {
+        if (window.HorizonPreload) {
+            window.HorizonPreload.show('Cargando calendario...');
+        }
 
         this.load_calendar()
             .then((data) => {
                 if (data) {
-                    // this.loading_end();
                     console.log("El calendario se cargó correctamente");
                 }
             })
             .catch((error) => {
                 console.error("Hubo un error al cargar el calendario:", error);
+            })
+            .finally(() => {
+                if (window.HorizonPreload) {
+                    window.HorizonPreload.hide();
+                }
             });
-
-        $("#preload").fadeIn();
     },
 }
 </script>

@@ -1,91 +1,151 @@
-/* preaload dentaluz */
+/* preload Horizon Finance */
+
+body.preload-open {
+    overflow: hidden;
+}
 
 .preload {
-    background-color: rgba(255, 255, 255, 0.9);
-    width: 100%;
-    height: 100vh;
     position: fixed;
-    margin: -20px;
-    margin-left: -30px;
+    inset: 0;
     z-index: 2060;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.92);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.preload.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.preload__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.preload__stage {
+    width: 140px;
+    height: 140px;
+}
+
+.preload__spinner {
+    width: 100%;
+    height: 100%;
+}
+
+.preload__svg {
     display: block;
-}
-
-.preload .central {
-    width: 90px;
-    position: absolute;
-    height: 100px;
-    top: 50%;
-    margin-top: -50px;
-    left: 50%;
-    margin-left: -50px;
+    width: 100%;
+    height: 100%;
     overflow: visible;
 }
 
-.preload .central p {
-    color: rgb(37, 35, 35);
-    font-size: 1rem;
+.preload__logo {
+    transform: none;
+}
+
+.preload__stroke {
+    opacity: 1;
+    animation: preload-line-draw 2.8s ease-in-out infinite;
+    animation-play-state: paused;
+}
+
+.preload__fill {
+    opacity: 0;
+    animation: preload-line-fill 2.8s ease-in-out infinite;
+    animation-play-state: paused;
+}
+
+.preload__line:nth-child(2),
+.preload__line:nth-child(4) {
+    animation-delay: 0.35s;
+}
+
+.preload.is-active .preload__stroke,
+.preload.is-active .preload__fill {
+    animation-play-state: running;
+}
+
+.preload__text {
+    margin: 0;
+    color: #374151;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     text-align: center;
-    animation-name: letra;
-    animation-duration: 2s;
-    animation-iteration-count: infinite;
-    animation-timing-function: out-in-ease;
+    animation: preload-text 1.5s ease-in-out infinite;
+    animation-play-state: paused;
 }
 
-.preload .central svg {
-    overflow: visible;
+.preload.is-active .preload__text {
+    animation-play-state: running;
 }
 
-.preload #diente {
-    fill: white;
-}
-
-.preload #fondo {
-    fill: #009FE3;
-    transform-origin: center;
-    animation-name: fondo;
-    animation-duration: 1s;
-    animation-iteration-count: infinite;
-    animation-timing-function: out-in-ease;
-}
-
-.preload #fondo2 {
-    fill: #009FE3;
-    transform-origin: center;
-    animation-name: fondo;
-    animation-duration: 1.1s;
-    animation-iteration-count: infinite;
-    animation-timing-function: out-in-ease;
-}
-
-@keyframes letra {
+@keyframes preload-line-draw {
     0% {
+        stroke-dashoffset: var(--line-length, 1000);
+        opacity: 1;
+    }
+
+    38% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+
+    52% {
+        stroke-dashoffset: 0;
         opacity: 0;
+    }
+
+    100% {
+        stroke-dashoffset: 0;
+        opacity: 0;
+    }
+}
+
+@keyframes preload-line-fill {
+    0%,
+    36% {
+        opacity: 0;
+    }
+
+    48%,
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes preload-text {
+    0%,
+    100% {
+        opacity: 0.35;
     }
 
     50% {
         opacity: 1;
     }
-
-    100% {
-        opacity: 0;
-    }
 }
 
-@keyframes fondo {
-    0% {
-        transform: scale(1.5);
-        opacity: 0;
-    }
-
-    50% {
-        transform: scale(1);
+@media (prefers-reduced-motion: reduce) {
+    .preload__stroke,
+    .preload__fill {
+        animation: none;
         opacity: 1;
+        stroke-dashoffset: 0;
     }
 
-    100% {
-        transform: scale(1.5);
-        opacity: 0;
+    .preload__text {
+        animation: none;
+        opacity: 1;
     }
 }
 

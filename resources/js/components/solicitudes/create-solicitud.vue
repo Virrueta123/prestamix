@@ -309,11 +309,6 @@
                                     <label class="form-check-label" for="Quincenal">Quincenal</label>
                                 </div>
                                 <div class="form-check mr-2 mt-2 sm:mt-0">
-                                    <input id="Diario" class="form-check-input" type="radio" name="frecuencia_pagos"
-                                        v-model="frecuencia_pagos" value="Diario">
-                                    <label class="form-check-label" for="Diario">Diario</label>
-                                </div>
-                                <div class="form-check mr-2 mt-2 sm:mt-0">
                                     <input id="Semanal" v-model="frecuencia_pagos" class="form-check-input" type="radio"
                                         name="frecuencia_pagos" value="Semanal">
                                     <label class="form-check-label" for="Semanal">Semanal</label>
@@ -799,9 +794,6 @@ export default {
             switch (newVal) {
                 case "Quincenal":
                     this.frecuencia_pagos_a = "Quincenas";
-                    break;
-                case "Diario":
-                    this.frecuencia_pagos_a = "Dias";
                     break;
 
                 case "Semanal":
@@ -1427,15 +1419,6 @@ export default {
 
             switch (this.frecuencia_pagos) {
 
-                case "Diario":
-                    this.cronograma = this.calcularAmortizacionFrancesdiario(
-                        this.monto_credito,
-                        parseInt(this.intervalo),
-                        parseInt(this.interes)
-                    );
-
-                    break;
-
                 case "Semanal":
                     this.cronograma = this.calcularAmortizacionFrancesSemanal(
                         this.monto_credito,
@@ -1472,10 +1455,6 @@ export default {
                         );
 
                     }
-
-                    break;
-
-                case "Anual":
 
                     break;
             }

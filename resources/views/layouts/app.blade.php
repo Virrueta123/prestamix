@@ -42,14 +42,17 @@ License: You must have a valid license purchased only from themeforest(the above
          Produccion
     </div> --}}
 
-{{--      <div class="preload" id="preload">--}}
-{{--          <div class="central">--}}
-
-{{--              <lottie-player style="margin-top: -50px; margin-left: -50px; width: 250px; height: 250px;" src="{{ asset('dist/images/logo/preload.json') }}" background="transparent" speed="2.5"--}}
-{{--                  style="width: 250px; height: 250px;" loop autoplay></lottie-player>--}}
-{{--              <p style="width: 300px; margin-left: -50px;">Cargando operacion</p>--}}
-{{--          </div>--}}
-{{--      </div>--}}
+      <div class="preload is-active" id="preload" role="status" aria-live="polite" aria-hidden="false">
+          <div class="preload__content">
+              <div class="preload__stage">
+                  <div class="preload__spinner">
+                      @include('layouts.partials.logo-horizon-svg')
+                  </div>
+              </div>
+              <p class="preload__text">Cargando...</p>
+          </div>
+      </div>
+      <script src="{{ asset('dist/js/preload.js') }}"></script>
 
       <!-- BEGIN: Mobile Menu -->
       <div class="mobile-menu md:hidden">
@@ -201,7 +204,6 @@ License: You must have a valid license purchased only from themeforest(the above
       <script src="{{ mix('js/app.js') }}"></script>
       <script>
           window.addEventListener('load', function() {
-
 
               @if (session()->has('success'))
                   Swal.fire({

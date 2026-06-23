@@ -788,12 +788,16 @@ export const myMixin = {
                 });
 
         },
-        loading_start() {
-            $("#preload").fadeIn()
+        loading_start(message) {
+            if (window.HorizonPreload) {
+                window.HorizonPreload.show(message);
+            }
         },
         loading_end() {
-            $("#preload").fadeOut()
-        }, 
+            if (window.HorizonPreload) {
+                window.HorizonPreload.hide();
+            }
+        },
         // mensajes de alerta
         // -----------
         alert_img_rechazada(message) {

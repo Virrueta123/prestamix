@@ -70,11 +70,6 @@
                                     <label class="form-check-label" for="Quincenal">Quincenal</label>
                                 </div>
                                 <div class="form-check mr-2 mt-2 sm:mt-0">
-                                    <input id="Diario" class="form-check-input" type="radio" name="frecuencia_pagos"
-                                        v-model="frecuencia_pagos" value="Diario">
-                                    <label class="form-check-label" for="Diario">Diario</label>
-                                </div>
-                                <div class="form-check mr-2 mt-2 sm:mt-0">
                                     <input id="Semanal" v-model="frecuencia_pagos" class="form-check-input" type="radio"
                                         name="frecuencia_pagos" value="Semanal">
                                     <label class="form-check-label" for="Semanal">Semanal</label>
@@ -83,11 +78,6 @@
                                     <input id="Mensual" v-model="frecuencia_pagos" class="form-check-input" type="radio"
                                         name="frecuencia_pagos" value="Mensual">
                                     <label class="form-check-label" for="Mensual">Mensual</label>
-                                </div>
-                                <div class="form-check mr-2 mt-2 sm:mt-0">
-                                    <input id="Anual" v-model="frecuencia_pagos" class="form-check-input" type="radio"
-                                        name="frecuencia_pagos" value="Anual">
-                                    <label class="form-check-label" for="Anual">Anual</label>
                                 </div>
                             </div>
                         </div>
@@ -438,9 +428,6 @@ export default {
                 case "Quincenal":
                     this.frecuencia_pagos_a = "Quincenas";
                     break;
-                case "Diario":
-                    this.frecuencia_pagos_a = "Dias";
-                    break;
 
                 case "Semanal":
                     this.frecuencia_pagos_a = "Semanas";
@@ -448,10 +435,6 @@ export default {
 
                 case "Mensual":
                     this.frecuencia_pagos_a = "Menses";
-                    break;
-
-                case "Anual":
-
                     break;
             }
         },
@@ -495,15 +478,6 @@ export default {
         calcular_cronograma() {
            
             switch (this.frecuencia_pagos) {
-
-                case "Diario":
-                    this.cronograma = this.calcularAmortizacionFrancesdiarioByDate(
-                        this.monto_credito,
-                        parseInt(this.intervalo),
-                        parseInt(this.interes),
-                        this.fecha
-                    );
-                    break;
 
                 case "Semanal":
                     this.cronograma = this.calcularAmortizacionFrancesSemanalByDate(
@@ -565,10 +539,6 @@ export default {
                     }
 
                     this.fecha_desembolso = this.fecha;
-                    break;
-
-                case "Anual":
-
                     break;
             }
 
