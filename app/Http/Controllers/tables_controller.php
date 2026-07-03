@@ -275,7 +275,18 @@ class tables_controller extends Controller
                     return $Data->solicitud->solicitud_nombre;
                 })
                 ->addColumn('analista', static function ($Data) {
-                    return "{$Data->analista->name}";
+                    if (!$Data->analista) {
+                        return 'Sin asignar';
+                    }
+
+                    return trim("{$Data->analista->name} {$Data->analista->lastname}");
+                })
+                ->addColumn('cobrador_nombre', static function ($Data) {
+                    if (!$Data->analista) {
+                        return 'Sin asignar';
+                    }
+
+                    return trim("{$Data->analista->name} {$Data->analista->lastname}");
                 })
                 ->addColumn('domicilio', static function ($Data) {
                     if (!isset($Data->solicitud)) {

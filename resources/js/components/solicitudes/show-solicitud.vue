@@ -740,26 +740,21 @@ export default {
 
             const headers = this.headers;
 
-            this.loading_start();
-
             return Axios
                 .post("/load_ingresos_prestamo", data, {
                     headers,
                 })
                 .then((response) => {
                     if (response.data.success) {
-                        // this.alert_success(response.data.message);
                         return response.data.data;
-
-                    } else {
-                        this.alert_warning(response.data.message);
                     }
-
+                    this.alert_warning(response.data.message);
+                    return [];
                 })
                 .catch((error) => {
-
                     this.alert_error_modal("Error en el servidor, recargue la pagina");
                     console.error(error);
+                    return [];
                 });
         },
         escucharEditarSolicitud(event) {
@@ -788,17 +783,18 @@ export default {
                 .then((response) => {
                     if (response.data.success) {
                         this.alert_success(response.data.message);
-                        this.loading_end();
                         return response.data.data;
-                    } else {
-                        this.alert_warning(response.data.message);
                     }
-
+                    this.alert_warning(response.data.message);
+                    return null;
                 })
                 .catch((error) => {
-
                     this.alert_error_modal("Error en el servidor");
                     console.error(error);
+                    return null;
+                })
+                .finally(() => {
+                    this.loading_end();
                 });
         },
         async check_mora(yes_mora, urlapi) {
@@ -817,18 +813,18 @@ export default {
                 })
                 .then((response) => {
                     if (response.data.success) {
-
-                        this.loading_end();
                         return response.data.data;
-                    } else {
-                        this.alert_warning(response.data.message);
                     }
-
+                    this.alert_warning(response.data.message);
+                    return null;
                 })
                 .catch((error) => {
-
                     this.alert_error_modal("Error en el servidor");
                     console.error(error);
+                    return null;
+                })
+                .finally(() => {
+                    this.loading_end();
                 });
         },
         generar_contrato() {
@@ -1158,7 +1154,7 @@ export default {
         }
     },
     mounted() {
-      
+        this.loading_end(true);
 
         this.load_ingresos().then((result) => {
             this.get_ingresos = result;

@@ -339,7 +339,8 @@ export default {
             fecha_actual: null,
             montos_reporte: [],
             is_loading_montos: false,
-            is_select_print: false
+            is_select_print: false,
+            autoAbrirCronograma: false,
         }
     },
     computed: {
@@ -413,6 +414,20 @@ export default {
         }
     },
     methods: {
+        intentarAbrirCronograma() {
+            if (!this.autoAbrirCronograma || !this.table) {
+                return;
+            }
+
+            const filas = this.table.rows({ search: 'applied' }).data().toArray();
+            if (filas.length !== 1) {
+                return;
+            }
+
+            this.autoAbrirCronograma = false;
+            this.get_cuota = filas[0];
+            this.is_opciones_modal = true;
+        },
         change_select_print() {
             if (this.is_select_print) {
                 this.table.select.style('multi');  // Selección múltiple
@@ -792,16 +807,15 @@ export default {
                 },
                 ],
                 "drawCallback": function (settings) {
-                    // Almacenar los datos de la tabla en una variable del componente Vue
-
                     self.data_table_by_count = settings.json;
+                    self.intentarAbrirCronograma();
                 }
             })
 
 
             if (this.nombre != "") {
+                this.autoAbrirCronograma = true;
                 this.table.search(this.nombre.replace(/-/g, " ")).draw();
-                $('#table_solicitud_aprobada input').val('Tokyo');
             }
 
             //funciones para pagar varias cuotas

@@ -4,6 +4,10 @@
 
         <form id="form_crear_ingreso_cuota" method="POST" action="#">
             <div id="vertical-form" class="p-5">
+                <cobrador-comision-banner
+                    :get-cuota="get_cuota"
+                    :cuota-unica="select_cronograma"
+                ></cobrador-comision-banner>
                 <div class="">
 
                     <div class="grid grid-cols-12 gap-6 mt-2">

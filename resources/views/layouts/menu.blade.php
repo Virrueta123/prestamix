@@ -254,6 +254,12 @@
                     <div class="side-menu__title"> Crear solicitud planilla </div>
                 </a>
             </li>
+            <li>
+                <a href="{{ route('comision.index') }}" class="side-menu">
+                    <div class="side-menu__icon"> <i class="fa-solid fa-percent"></i> </div>
+                    <div class="side-menu__title"> Comisiones cobradores </div>
+                </a>
+            </li>
         </ul>
     </li>
 

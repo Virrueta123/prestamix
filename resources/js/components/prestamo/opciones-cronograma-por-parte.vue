@@ -1,6 +1,10 @@
 <template>
     <ScrollPanel style="width: 100%; height: 400px">
 
+        <div class="px-2 pt-2">
+            <cobrador-comision-banner :get-cuota="get_cuota" :mostrar-resumen="false"></cobrador-comision-banner>
+        </div>
+
         <div class="p-2">
             <div class="preview">
                 <div class=" ">
@@ -184,16 +188,15 @@ export default {
                 });
         },
         load_ingresos() {
-
-        
+            if (!this.get_cuota?.solicitud?.urlapi) {
+                return Promise.resolve([]);
+            }
 
             const data = {
                 urlapi: this.get_cuota.solicitud.urlapi
             }
 
             const headers = this.headers;
-
-            this.loading_start();
 
             return Axios
                 .post("/load_ingresos_prestamo", data, {
@@ -222,8 +225,6 @@ export default {
             }
 
             const headers = this.headers;
-
-            this.loading_start();
 
             return Axios
                 .post("/get_cuotas", data, {
@@ -563,31 +564,29 @@ export default {
         }
     },
     mounted() {
-        var self = this;
+        this.loading_start('Cargando cronograma...');
 
-        this.load_cronogramas().then((result) => {
+        Promise.all([
+            this.load_ingresos(),
+            this.load_cronogramas(),
+        ]).then(([ingresos, cronogramas]) => {
+            this.get_ingresos = ingresos || [];
+            const filas = Array.isArray(cronogramas) ? cronogramas : [];
+            this.load_cronogramas_datatable(filas);
 
-            this.load_cronogramas_datatable(result);
-            var ultimo_periodo = result[result.length - 1];
-
-
-            const fechaDada = moment(ultimo_periodo.fechaVencimiento);
-            const fechaActual = moment();
-
-            if (fechaDada.isBefore(fechaActual, 'day')) {
-                this.reprogramacion = true;
+            const ultimoPeriodo = filas[filas.length - 1];
+            if (ultimoPeriodo?.fechaVencimiento) {
+                const fechaDada = moment(ultimoPeriodo.fechaVencimiento);
+                const fechaActual = moment();
+                if (fechaDada.isBefore(fechaActual, 'day')) {
+                    this.reprogramacion = true;
+                }
             }
-
-            this.loading_end();
-
         }).catch((err) => {
-
-        });
-
-        this.load_ingresos().then((result) => {
-            this.get_ingresos = result;
-        }).catch((err) => {
-        
+            console.error(err);
+            this.alert_error_modal('No se pudo cargar el cronograma del préstamo.');
+        }).finally(() => {
+            this.loading_end(true);
         });
     }
 }

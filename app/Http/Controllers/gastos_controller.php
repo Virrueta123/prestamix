@@ -9,6 +9,7 @@ use App\Models\pagos;
 use App\Models\Solicitud;
 use App\Models\solicitud_trabajador;
 use App\Models\tipo_gasto;
+use App\Services\ComisionService;
 use App\Utils\funciones;
 use App\Utils\ticketera;
 use Carbon\Carbon;
@@ -377,11 +378,15 @@ class gastos_controller extends Controller
                 ]);
             }
 
+            $gastosId = Encryptor::decrypt($Params['urlapi']);
+
             $gasto = gastos::with([
-                "solicitud" 
-                ])->find(Encryptor::decrypt($Params['urlapi']));
- 
-            $pago = pagos::where("gastos_id", Encryptor::decrypt($Params['urlapi']));
+                "solicitud"
+                ])->find($gastosId);
+
+            app(ComisionService::class)->revertirPorGasto($gastosId);
+
+            $pago = pagos::where("gastos_id", $gastosId);
             $pago->delete();
 
             if( $gasto->tipo_gasto_id == 3 ){
@@ -390,7 +395,7 @@ class gastos_controller extends Controller
                 $solicitud->save();
             }
   
-            gastos::where("gastos_id", Encryptor::decrypt($Params['urlapi']))->delete();
+            gastos::where("gastos_id", $gastosId)->delete();
   
             if (true) {
                 return response()->json([

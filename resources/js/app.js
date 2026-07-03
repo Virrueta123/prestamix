@@ -244,6 +244,11 @@ app.component('create-compra', require('./components/compra/create-compra.vue').
 app.component('edit-compra', require('./components/compra/edit-compra.vue').default);
 app.component('show-compra', require('./components/compra/show-compra.vue').default);
 
+// comisiones trabajadores
+app.component('table-comisiones', require('./components/comision/table-comisiones.vue').default);
+app.component('comision-cobrador-view', require('./components/comision/comision-cobrador-view.vue').default);
+app.component('cobrador-comision-banner', require('./components/comision/cobrador-comision-banner.vue').default);
+
 // componentes salario   
 app.component('create-salario', require('./components/salario/create-salario.vue').default);
 app.component('select-salario', require('./components/salario/select-salario.vue').default);

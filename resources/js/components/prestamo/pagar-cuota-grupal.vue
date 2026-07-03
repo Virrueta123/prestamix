@@ -3,7 +3,11 @@
         <div class="intro-y box mt-5">
             <form id="form_crear_ingreso_cuota_grupal" method="POST" action="#">
                 <div id="vertical-form">
-                    <div class="">
+                    <div class="p-4">
+                        <cobrador-comision-banner
+                            :get-cuota="get_cuota"
+                            :pago-grupal="pago_grupal"
+                        ></cobrador-comision-banner>
 
                         <div class="text-primary font-semibold text-3xl">{{ estado }}</div>
 
@@ -16,6 +20,8 @@
                                         <thead>
                                             <tr>
                                                 <th class="whitespace-nowrap">Descripcion</th>
+                                                <th class="whitespace-nowrap">Interés</th>
+                                                <th class="whitespace-nowrap">Comisión cobrador</th>
                                                 <th class="whitespace-nowrap">Monto cuota</th>
                                                 <th class="whitespace-nowrap">Mora</th>
                                             </tr>
@@ -24,6 +30,8 @@
                                             <tr v-for="(p_g, index_p_g) in pago_grupal" :key="index_p_g">
                                                 <td>Pago cuota {{ p_g.periodo }} de la solicitud n°
                                                     {{ get_cuota.solicitud.code }} </td>
+                                                <td>{{ formatear_dinero_soles(interesLinea(p_g)) }}</td>
+                                                <td class="text-primary font-medium">{{ formatear_dinero_soles(comisionLinea(p_g)) }}</td>
                                                 <td> {{ formatear_dinero_soles(p_g.cuota) }}</td>
                                                 <td v-if="p_g.yes_mora == 'Y'"> {{
                                                     formatear_dinero_soles(totalMora) }}
@@ -34,38 +42,38 @@
                                         <tfoot>
                                             <tr class="text-primary">
                                                 <td>Totales</td>
-                                                <td class="bg-primary text-center text-white">{{
-                                                    formatear_dinero_soles(totalCuota) }}</td>
-                                                <td class="bg-primary text-center text-white">{{
-                                                    formatear_dinero_soles(totalMora) }}</td>
+                                                <td class="bg-primary text-center text-white">{{ formatear_dinero_soles(totalInteresPago) }}</td>
+                                                <td class="bg-primary text-center text-white">{{ formatear_dinero_soles(totalComisionPago) }}</td>
+                                                <td class="bg-primary text-center text-white">{{ formatear_dinero_soles(totalCuota) }}</td>
+                                                <td class="bg-primary text-center text-white">{{ formatear_dinero_soles(totalMora) }}</td>
                                             </tr>
                                             <tr class="text-primary">
                                                 <td>Total de la cuota + mora</td>
-                                                <td colspan="2" class="bg-primary text-center text-white">{{
+                                                <td colspan="4" class="bg-primary text-center text-white">{{
                                                     formatear_dinero_soles(totalGeneral) }}</td>
                                             </tr>
 
                                             <tr class="text-primary">
                                                 <td>Total que amortizaron</td>
-                                                <td colspan="2" class="bg-primary text-center text-white"> {{
+                                                <td colspan="4" class="bg-primary text-center text-white"> {{
                                                     total_pagado_amortizado }} </td>
                                             </tr>
 
                                             <tr class="text-primary">
                                                 <td>Total restante</td>
-                                                <td colspan="2" class="bg-primary text-center text-white"> {{
+                                                <td colspan="4" class="bg-primary text-center text-white"> {{
                                                     formatear_dinero_soles(totalrestante) }} </td>
                                             </tr>
 
                                             <tr class="text-primary" v-if="adelanto != 0">
                                                 <td>Adelanto de prestamo</td>
-                                                <td colspan="2" class="bg-primary text-center text-white"> {{ adelanto
+                                                <td colspan="4" class="bg-primary text-center text-white"> {{ adelanto
                                                     }} </td>
                                             </tr>
 
                                             <tr class="text-primary">
                                                 <td>Saldo restante</td>
-                                                <td colspan="2" class="bg-primary text-center text-white"> {{
+                                                <td colspan="4" class="bg-primary text-center text-white"> {{
                                                     formatear_dinero_soles(saldo_restante) }} </td>
                                             </tr>
 
@@ -170,6 +178,10 @@ import 'moment/locale/es';
 import {
     myMixin
 } from "../../mixin.js";
+import {
+    interesCuotaParaComision,
+    comisionDesdeInteres,
+} from "../../utils/comisionHelper.js";
 
 export default {
     mixins: [myMixin],
@@ -248,7 +260,13 @@ export default {
             var total = this.redondear(totalMora + totalCuota);
 
             return this.redondear(total);
-        }
+        },
+        totalInteresPago() {
+            return this.pago_grupal.reduce((sum, p) => sum + this.interesLinea(p), 0);
+        },
+        totalComisionPago() {
+            return comisionDesdeInteres(this.totalInteresPago, this.porcentajeComision);
+        },
     },
     data() {
         return {
@@ -268,11 +286,24 @@ export default {
             is_btn_pagos: false,
             is_btn_insertar: true,
             detalle_ingresos: [],
-            mora:0
+            mora:0,
+            porcentajeComision: 30,
         }
     },
     methods: {
-
+        interesLinea(pG) {
+            return interesCuotaParaComision(pG);
+        },
+        comisionLinea(pG) {
+            return comisionDesdeInteres(this.interesLinea(pG), this.porcentajeComision);
+        },
+        cargarPorcentajeComision() {
+            Axios.get('/get_comision_config').then((res) => {
+                if (res.data?.success) {
+                    this.porcentajeComision = res.data.porcentaje;
+                }
+            }).catch(() => {});
+        },
         load_ingresos_por_cuota() {
             const data = {
                 urlapi: this.get_cuota.cuota_actual.urlapi
@@ -404,7 +435,7 @@ export default {
         }
     },
     mounted() {
-
+        this.cargarPorcentajeComision();
         var self = this;
 
         $("#form_crear_ingreso_cuota_grupal").validate({

@@ -72,6 +72,9 @@ include_once "routes/reportes.php";
 //salario
 include_once "routes/salario.php";
 
+//comisiones trabajadores
+include_once "routes/comision.php";
+
 //gasto
 include_once "routes/gasto.php";
 

@@ -2,6 +2,7 @@
 
 namespace App\Utils;
 
+use Illuminate\Support\Facades\Log;
 use Mike42\Escpos\EscposImage;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 use Mike42\Escpos\Printer;
@@ -163,13 +164,15 @@ class ticketera
 
         // Establecer que deseas recibir la respuesta como una cadena en lugar de imprimirla directamente
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 4);
 
         // Ejecutar la solicitud y obtener la respuesta
         $response = curl_exec($ch);
 
         // Verificar si hubo errores
         if (curl_errno($ch)) {
-            echo 'Error: ' . curl_error($ch);
+            Log::warning('Ticketera imprimir_gasto: ' . curl_error($ch));
         }
 
         // Cerrar la conexión cURL

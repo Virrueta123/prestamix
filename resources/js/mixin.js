@@ -793,9 +793,9 @@ export const myMixin = {
                 window.HorizonPreload.show(message);
             }
         },
-        loading_end() {
+        loading_end(force = false) {
             if (window.HorizonPreload) {
-                window.HorizonPreload.hide();
+                window.HorizonPreload.hide(force);
             }
         },
         // mensajes de alerta

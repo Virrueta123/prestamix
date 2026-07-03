@@ -15,6 +15,7 @@ use App\Models\Prestamo;
 use App\Models\Solicitud;
 use App\Models\User;
 use App\Utils\Formulas;
+use App\Services\ComisionService;
 use App\Utils\funciones;
 use App\Utils\ticketera;
 use Carbon\Carbon;
@@ -945,6 +946,15 @@ class PrestamoController extends Controller
                 }
 
                 if ($detalle_ingreso) {
+                    $prestamoComision = Prestamo::find($ingreso->prestamo_id);
+                    if ($prestamoComision) {
+                        app(ComisionService::class)->acumularDesdePagoGrupal(
+                            $prestamoComision,
+                            (int) $ingreso->ingreso_id,
+                            $Params['pago_grupal']
+                        );
+                    }
+
                     session()->flash('success', 'Ingresos creado correctamente');
                     return response()->json([
                         'message' => 'Ingreso creado correctamente',

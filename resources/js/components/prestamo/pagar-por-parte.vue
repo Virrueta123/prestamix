@@ -3,6 +3,9 @@
         <div class="intro-y box mt-5">
             <form id="form_crear_ingreso_cuota_grupal" method="POST" action="#">
                 <div id="vertical-form">
+                    <div class="p-4">
+                        <cobrador-comision-banner :get-cuota="get_cuota" :mostrar-resumen="false"></cobrador-comision-banner>
+                    </div>
                     <div class="">
 
                         <div class="grid grid-cols-12 gap-6 mt-2">
