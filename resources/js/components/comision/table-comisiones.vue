@@ -135,7 +135,7 @@
                         <thead>
                             <tr>
                                 <th>Cobrador</th>
-                                <th class="text-center">Préstamos</th>
+                                <th class="text-center">Solicitudes</th>
                                 <th class="text-center">Cuotas</th>
                                 <th class="text-right">Interés</th>
                                 <th class="text-right">Comisión ({{ porcentaje }}%)</th>

@@ -489,7 +489,8 @@ class ComisionService
             if (!isset($agrupado[$key])) {
                 $agrupado[$key] = [
                     'prestamo_id' => $linea['prestamo_id'],
-                    'prestamo_code' => $linea['prestamo_code'],
+                    'prestamo_code' => $linea['prestamo_code'], // = N° solicitud
+                    'solicitud_code' => $linea['solicitud_code'] ?? $linea['prestamo_code'],
                     'prestamo_urlapi' => $linea['prestamo_urlapi'],
                     'planilla_url' => $linea['planilla_url'],
                     'cliente_nombre' => $linea['cliente_nombre'],
@@ -527,26 +528,33 @@ class ComisionService
     {
         $prestamo = $detalle->prestamo;
         $clienteNombre = '—';
-        $prestamoCode = '—';
+        $solicitudCode = '—';
         $prestamoUrlapi = null;
         $planillaUrl = null;
 
         if ($prestamo) {
-            $prestamoCode = $prestamo->code ?? sprintf('%06d', $prestamo->serie ?? 0);
             $prestamoUrlapi = $prestamo->urlapi ?? null;
-            $planillaUrl = '/planilla_prestamos/' . $prestamoCode;
-            $cliente = $prestamo->solicitud?->cliente;
+            // Número de solicitud (no serie del préstamo)
+            $solicitud = $prestamo->solicitud;
+            if ($solicitud) {
+                $solicitudCode = $solicitud->code
+                    ?? sprintf('%06d', $solicitud->serie ?? 0);
+            }
+            $planillaUrl = '/planilla_prestamos/' . ($prestamo->code ?? $solicitudCode);
+            $cliente = $solicitud?->cliente;
             if ($cliente) {
                 $clienteNombre = trim(($cliente->cli_nombre ?? '') . ' ' . ($cliente->cli_apellido ?? ''));
-            } elseif ($prestamo->solicitud?->solicitud_nombre) {
-                $clienteNombre = $prestamo->solicitud->solicitud_nombre;
+            } elseif ($solicitud?->solicitud_nombre) {
+                $clienteNombre = $solicitud->solicitud_nombre;
             }
         }
 
         return [
             'comision_detalle_id' => $detalle->comision_detalle_id,
             'prestamo_id' => $detalle->prestamo_id,
-            'prestamo_code' => $prestamoCode,
+            // Código mostrado = N° de solicitud
+            'prestamo_code' => $solicitudCode,
+            'solicitud_code' => $solicitudCode,
             'prestamo_urlapi' => $prestamoUrlapi,
             'planilla_url' => $planillaUrl,
             'cliente_nombre' => $clienteNombre,

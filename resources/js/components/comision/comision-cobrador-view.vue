@@ -68,7 +68,7 @@
                             <thead>
                                 <tr>
                                     <th>Período</th>
-                                    <th class="text-center">Préstamos</th>
+                                    <th class="text-center">Solicitudes</th>
                                     <th class="text-center">Cuotas</th>
                                     <th class="text-right">Interés</th>
                                     <th class="text-right">Comisión ({{ porcentaje }}%)</th>
@@ -120,7 +120,7 @@
                         <div class="comision-kpis">
                             <div class="comision-kpi">
                                 <span class="comision-kpi__val">{{ resumen.totales.prestamos }}</span>
-                                <span class="comision-kpi__lbl">Préstamos</span>
+                                <span class="comision-kpi__lbl">Solicitudes</span>
                             </div>
                             <div class="comision-kpi">
                                 <span class="comision-kpi__val">{{ resumen.totales.cuotas }}</span>
@@ -148,7 +148,7 @@
                             >
                                 <div class="comision-prestamo__head">
                                     <div class="comision-prestamo__info">
-                                        <span class="comision-prestamo__code">#{{ grupo.prestamo_code }}</span>
+                                        <span class="comision-prestamo__code">Solicitud #{{ grupo.solicitud_code || grupo.prestamo_code }}</span>
                                         <span class="comision-prestamo__cliente">{{ grupo.cliente_nombre }}</span>
                                     </div>
                                     <div class="comision-prestamo__totals">
@@ -170,7 +170,7 @@
                                         class="btn btn-outline-primary btn-sm comision-prestamo__link"
                                     >
                                         <i class="fa fa-external-link-alt"></i>
-                                        Ver préstamo
+                                        Ver planilla
                                     </a>
                                 </div>
                                 <table class="table comision-table comision-table--nested">
@@ -209,7 +209,7 @@
                                 <table class="table comision-table comision-table--summary">
                                     <thead>
                                         <tr>
-                                            <th>Préstamo</th>
+                                            <th>N° solicitud</th>
                                             <th>Cliente</th>
                                             <th class="text-center">Cuotas</th>
                                             <th class="text-right">Interés</th>
@@ -218,8 +218,8 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="g in resumen.por_prestamo" :key="'sum-' + g.prestamo_code">
-                                            <td class="font-medium">#{{ g.prestamo_code }}</td>
+                                        <tr v-for="g in resumen.por_prestamo" :key="'sum-' + (g.solicitud_code || g.prestamo_code)">
+                                            <td class="font-medium">#{{ g.solicitud_code || g.prestamo_code }}</td>
                                             <td class="text-sm">{{ g.cliente_nombre }}</td>
                                             <td class="text-center">{{ g.cuotas }}</td>
                                             <td class="text-right">S/ {{ formatear_dinero_soles(g.interes_total) }}</td>
@@ -277,7 +277,7 @@
                                             Calculado: {{ formatear_dinero_soles(totalComisionFinal) }} · ajustado manualmente
                                         </span>
                                         <span v-else class="comision-checkout__status-detail">
-                                            {{ resumen.totales.cuotas }} cuotas · {{ resumen.totales.prestamos }} préstamos
+                                            {{ resumen.totales.cuotas }} cuotas · {{ resumen.totales.prestamos }} solicitudes
                                         </span>
                                     </template>
                                 </div>
@@ -503,7 +503,7 @@ export default {
                 html: `
                     <p>Trabajador: <strong>${this.nombreTrabajador}</strong></p>
                     <p>Período: <strong>${this.mesLabel} ${this.anio}</strong></p>
-                    <p>Préstamos: <strong>${this.resumen?.totales?.prestamos}</strong> · Cuotas: <strong>${this.resumen?.totales?.cuotas}</strong></p>
+                    <p>Solicitudes: <strong>${this.resumen?.totales?.prestamos}</strong> · Cuotas: <strong>${this.resumen?.totales?.cuotas}</strong></p>
                     <p>Interés sumado: <strong>${interes}</strong> × <strong>${pct}%</strong></p>
                     ${ajusteHtml}
                     <p class="text-xl mt-2">Total a pagar: <strong class="text-primary">${monto}</strong></p>

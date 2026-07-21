@@ -8,7 +8,7 @@
                         <i class="fa fa-hand-holding-usd"></i>
                     </div>
                     <div>
-                        <h1 class="ben-hero__title">Beneficiarios que van pagando</h1>
+                        <h1 class="ben-hero__title">Clientes que pagan</h1>
                         <p class="ben-hero__sub">
                             Lista de pagos de clientes ordenada por fecha (más recientes primero)
                         </p>
@@ -71,7 +71,7 @@
             <!-- Tabla -->
             <div class="ben-card">
                 <div class="ben-card__head">
-                    <h2 class="ben-card__title">Listado de beneficiarios</h2>
+                    <h2 class="ben-card__title">Listado de clientes</h2>
                     <p class="ben-card__desc">Pagos de cuotas con interés cobrado, del más nuevo al más antiguo.</p>
                 </div>
 
@@ -82,7 +82,7 @@
 
                 <div v-else-if="pagos.length === 0" class="ben-empty">
                     <i class="fa fa-inbox ben-empty__icon"></i>
-                    <p>No hay pagos de beneficiarios en el rango seleccionado.</p>
+                    <p>No hay pagos de clientes en el rango seleccionado.</p>
                 </div>
 
                 <div v-else class="ben-table-wrap">
@@ -90,9 +90,9 @@
                         <thead>
                             <tr>
                                 <th>Fecha pago</th>
-                                <th>Beneficiario</th>
+                                <th>Cliente</th>
                                 <th>DNI</th>
-                                <th class="text-center">Préstamo</th>
+                                <th class="text-center">N° solicitud</th>
                                 <th class="text-center">Cuota</th>
                                 <th class="text-right">Monto pagado</th>
                                 <th class="text-right">Interés</th>
@@ -112,7 +112,7 @@
                                 </td>
                                 <td>{{ p.cli_dni || '—' }}</td>
                                 <td class="text-center">
-                                    <span class="ben-code">{{ p.prestamo }}</span>
+                                    <span class="ben-code">{{ p.solicitud }}</span>
                                 </td>
                                 <td class="text-center">{{ p.periodo }}</td>
                                 <td class="text-right">S/ {{ formatear_dinero_soles(p.monto_pagado) }}</td>
@@ -207,7 +207,7 @@ export default {
         async cargar() {
             this.loading = true;
             try {
-                const { data } = await Axios.post('/load_beneficiarios_pagos', {
+                const { data } = await Axios.post('/load_clientes_que_pagan', {
                     fecha_inicio: this.fechaInicio || null,
                     fecha_fin: this.fechaFin || null,
                 });
@@ -222,7 +222,7 @@ export default {
                 }
             } catch (e) {
                 console.error(e);
-                this.$swal?.fire?.('Error', 'No se pudieron cargar los pagos de beneficiarios', 'error');
+                this.$swal?.fire?.('Error', 'No se pudieron cargar los pagos de clientes', 'error');
             } finally {
                 this.loading = false;
             }

@@ -428,17 +428,23 @@ class ClienteController extends Controller
     }
 
     /**
-     * Vista: lista de beneficiarios que van pagando + gráfico de intereses.
+     * Vista: clientes que van pagando + gráfico de intereses.
      */
+    public function clientes_que_pagan()
+    {
+        return view('modules.cliente.clientes_que_pagan');
+    }
+
+    /** @deprecated usar clientes_que_pagan */
     public function beneficiarios_pagos()
     {
-        return view('modules.cliente.beneficiarios');
+        return $this->clientes_que_pagan();
     }
 
     /**
-     * API: pagos de beneficiarios (más recientes primero) + intereses mensuales.
+     * API: pagos de clientes (más recientes primero) + intereses mensuales.
      */
-    public function load_beneficiarios_pagos(Request $request)
+    public function load_clientes_que_pagan(Request $request)
     {
         try {
             $fechaInicio = $request->input('fecha_inicio');
@@ -481,7 +487,8 @@ class ClienteController extends Controller
                     'c.yes_interes',
                     'c.amortizacion',
                     'c.yes_pago',
-                    'p.serie as prestamo_serie',
+                    's.serie as solicitud_serie',
+                    's.solicitud_id',
                     'p.frecuencia_pagos',
                     'p.prestamo_id',
                 ])
@@ -494,7 +501,8 @@ class ClienteController extends Controller
                         'ingreso_id' => $row->ingreso_id,
                         'cliente' => trim(($row->cli_nombre ?? '') . ' ' . ($row->cli_apellido ?? '')),
                         'cli_dni' => $row->cli_dni,
-                        'prestamo' => sprintf('%06d', $row->prestamo_serie),
+                        // Número de solicitud (serie), no el de préstamo
+                        'solicitud' => sprintf('%06d', $row->solicitud_serie ?? 0),
                         'periodo' => $row->periodo,
                         'cuota' => (float) $row->cuota,
                         'monto_pagado' => (float) $row->monto_detalle,

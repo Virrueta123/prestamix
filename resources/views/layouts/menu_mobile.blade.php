@@ -84,9 +84,9 @@
                 </a>
             </li>
             <li>
-                <a href="{{ route('cliente.beneficiarios') }}" class="menu">
+                <a href="{{ route('cliente.clientes_que_pagan') }}" class="menu">
                     <div class="menu__icon"> <i class="fa-solid fa-hand-holding-dollar"></i> </div>
-                    <div class="menu__title"> Beneficiarios que pagan </div>
+                    <div class="menu__title"> Clientes que pagan </div>
                 </a>
             </li>
         </ul>
