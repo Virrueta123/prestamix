@@ -10,13 +10,27 @@
                     <div>
                         <h1 class="comision-hero__title">Comisiones de cobradores</h1>
                         <p class="comision-hero__sub">
-                            {{ porcentaje }}% del interés cobrado en cuotas · período mensual
+                            Del interés cobrado:
+                            <strong>{{ porcentaje }}% cobrador</strong>
+                            ·
+                            <strong class="comision-hero__empresa">{{ porcentajeEmpresa }}% empresa</strong>
+                            · período mensual
                         </p>
                     </div>
                 </div>
-                <div class="comision-hero__badge">
-                    <span class="comision-hero__badge-label">Período activo</span>
-                    <span class="comision-hero__badge-value">{{ mesLabel }} {{ anio }}</span>
+                <div class="comision-hero__badges">
+                    <div class="comision-hero__badge">
+                        <span class="comision-hero__badge-label">Cobrador</span>
+                        <span class="comision-hero__badge-value">{{ porcentaje }}%</span>
+                    </div>
+                    <div class="comision-hero__badge comision-hero__badge--empresa">
+                        <span class="comision-hero__badge-label">Empresa</span>
+                        <span class="comision-hero__badge-value">{{ porcentajeEmpresa }}%</span>
+                    </div>
+                    <div class="comision-hero__badge">
+                        <span class="comision-hero__badge-label">Período</span>
+                        <span class="comision-hero__badge-value">{{ mesLabel }} {{ anio }}</span>
+                    </div>
                 </div>
             </div>
 
@@ -48,7 +62,7 @@
 
                 <div v-if="puedeProcesar" class="comision-toolbar__config">
                     <div class="comision-field comision-field--sm">
-                        <label class="comision-field__label">% Comisión</label>
+                        <label class="comision-field__label">% Cobrador</label>
                         <div class="comision-input-group">
                             <input
                                 v-model.number="porcentajeEdit"
@@ -66,6 +80,11 @@
                                 {{ guardandoConfig ? '...' : 'Guardar' }}
                             </button>
                         </div>
+                        <p class="comision-field__hint">
+                            Empresa se queda con
+                            <strong>{{ porcentajeEmpresaEdit }}%</strong>
+                            del interés
+                        </p>
                     </div>
                 </div>
             </div>
@@ -80,9 +99,17 @@
                     <span class="comision-stat__label">Pendientes</span>
                     <span class="comision-stat__value comision-stat__value--warn">{{ totalPendientes }}</span>
                 </div>
+                <div class="comision-stat">
+                    <span class="comision-stat__label">Interés del mes</span>
+                    <span class="comision-stat__value">S/ {{ formatear_dinero_soles(totalInteresMes) }}</span>
+                </div>
                 <div class="comision-stat comision-stat--highlight">
-                    <span class="comision-stat__label">Comisión acumulada del mes</span>
-                    <span class="comision-stat__value comision-stat__value--primary">{{ formatear_dinero_soles(totalComisionMes) }}</span>
+                    <span class="comision-stat__label">Cobradores ({{ porcentaje }}%)</span>
+                    <span class="comision-stat__value comision-stat__value--primary">S/ {{ formatear_dinero_soles(totalComisionMes) }}</span>
+                </div>
+                <div class="comision-stat comision-stat--empresa">
+                    <span class="comision-stat__label">Empresa ({{ porcentajeEmpresa }}%)</span>
+                    <span class="comision-stat__value comision-stat__value--empresa">S/ {{ formatear_dinero_soles(totalEmpresaMes) }}</span>
                 </div>
             </div>
 
@@ -111,7 +138,8 @@
                                 <th class="text-center">Préstamos</th>
                                 <th class="text-center">Cuotas</th>
                                 <th class="text-right">Interés</th>
-                                <th class="text-right">Comisión</th>
+                                <th class="text-right">Comisión ({{ porcentaje }}%)</th>
+                                <th class="text-right">Empresa ({{ porcentajeEmpresa }}%)</th>
                                 <th class="text-center">Estado</th>
                                 <th class="text-center">Acción</th>
                             </tr>
@@ -126,9 +154,14 @@
                                 </td>
                                 <td class="text-center">{{ p.prestamos_count ?? '—' }}</td>
                                 <td class="text-center">{{ p.detalles_count }}</td>
-                                <td class="text-right">{{ formatear_dinero_soles(p.monto_interes_pagado) }}</td>
+                                <td class="text-right">S/ {{ formatear_dinero_soles(p.monto_interes_pagado) }}</td>
                                 <td class="text-right">
-                                    <span class="comision-monto">{{ formatear_dinero_soles(p.monto_acumulado) }}</span>
+                                    <span class="comision-monto">S/ {{ formatear_dinero_soles(p.monto_acumulado) }}</span>
+                                </td>
+                                <td class="text-right">
+                                    <span class="comision-monto comision-monto--empresa">
+                                        S/ {{ formatear_dinero_soles(empresaDePeriodo(p)) }}
+                                    </span>
                                 </td>
                                 <td class="text-center">
                                     <span :class="p.status === 'P' ? 'comision-pill comision-pill--pending' : 'comision-pill comision-pill--done'">
@@ -153,6 +186,7 @@
 <script>
 import Axios from 'axios';
 import { myMixin } from '../../mixin.js';
+import { porcentajeEmpresa, empresaDesdeInteres } from '../../utils/comisionHelper.js';
 
 export default {
     mixins: [myMixin],
@@ -181,11 +215,23 @@ export default {
         mesLabel() {
             return this.meses.find((m) => m.val === this.mes)?.label ?? '';
         },
+        porcentajeEmpresa() {
+            return porcentajeEmpresa(this.porcentaje);
+        },
+        porcentajeEmpresaEdit() {
+            return porcentajeEmpresa(this.porcentajeEdit);
+        },
         totalPendientes() {
             return this.periodos.filter((p) => p.status === 'P').length;
         },
+        totalInteresMes() {
+            return this.periodos.reduce((s, p) => s + parseFloat(p.monto_interes_pagado || 0), 0);
+        },
         totalComisionMes() {
             return this.periodos.reduce((s, p) => s + parseFloat(p.monto_acumulado || 0), 0);
+        },
+        totalEmpresaMes() {
+            return Math.round((this.totalInteresMes - this.totalComisionMes) * 100) / 100;
         },
     },
     mounted() {
@@ -193,6 +239,9 @@ export default {
         this.cargar();
     },
     methods: {
+        empresaDePeriodo(p) {
+            return empresaDesdeInteres(p.monto_interes_pagado, this.porcentaje);
+        },
         iniciales(p) {
             const t = p.trabajador;
             if (!t) return '?';
@@ -320,13 +369,24 @@ export default {
     margin: 0.2rem 0 0;
 }
 
+.comision-hero__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
 .comision-hero__badge {
     text-align: center;
-    padding: 0.65rem 1.25rem;
+    padding: 0.65rem 1rem;
     background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 0.75rem;
-    min-width: 140px;
+    min-width: 100px;
+}
+
+.comision-hero__badge--empresa {
+    border-color: #bfdbfe;
+    background: #eff6ff;
 }
 
 .comision-hero__badge-label {
@@ -344,6 +404,24 @@ export default {
     font-weight: 600;
     color: #05be50;
     margin-top: 0.15rem;
+}
+
+.comision-hero__badge--empresa .comision-hero__badge-value {
+    color: #1e40af;
+}
+
+.comision-hero__empresa {
+    color: #1e40af;
+}
+
+.comision-field__hint {
+    margin: 0.4rem 0 0;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.comision-field__hint strong {
+    color: #1e40af;
 }
 
 .comision-toolbar {
@@ -406,15 +484,9 @@ export default {
 
 .comision-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 1rem;
     margin-bottom: 1.25rem;
-}
-
-@media (max-width: 768px) {
-    .comision-stats {
-        grid-template-columns: 1fr;
-    }
 }
 
 .comision-stat {
@@ -430,6 +502,11 @@ export default {
     border-color: #bbf7d0;
 }
 
+.comision-stat--empresa {
+    background: linear-gradient(135deg, #eff6ff, #fff);
+    border-color: #bfdbfe;
+}
+
 .comision-stat__label {
     display: block;
     font-size: 0.75rem;
@@ -439,13 +516,19 @@ export default {
 
 .comision-stat__value {
     display: block;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: #0f172a;
 }
 
 .comision-stat__value--warn { color: #d97706; }
 .comision-stat__value--primary { color: #05be50; }
+.comision-stat__value--empresa { color: #1e40af; }
+
+.comision-monto--empresa {
+    color: #1e40af !important;
+    font-weight: 700;
+}
 
 .comision-card {
     background: #fff;

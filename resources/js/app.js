@@ -188,6 +188,7 @@ app.component('table-cliente', require('./components/cliente/table-cliente.vue')
 // app.component('create-cliente', require('./components/cliente/create-cliente.vue').default);
 app.component('edit-cliente', require('./components/cliente/edit-cliente.vue').default);
 app.component('show-cliente', require('./components/cliente/show-cliente.vue').default);
+app.component('table-beneficiarios-pagos', require('./components/cliente/table-beneficiarios-pagos.vue').default);
 
 // componentes ingresos varios 
 app.component('table-ingresos-varios', require('./components/ingresos-varios/table-ingresos-varios.vue').default);

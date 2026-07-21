@@ -2,14 +2,16 @@
 use Illuminate\Support\Facades\Route;
 
 // get
-Route::get('/cliente', [App\Http\Controllers\ClienteController::class, 'index'])->name('cliente.index'); 
-Route::get('/cliente/{urlapi}', [App\Http\Controllers\ClienteController::class, 'show'])->name('cliente.show'); 
+Route::get('/cliente', [App\Http\Controllers\ClienteController::class, 'index'])->name('cliente.index');
+Route::get('/cliente/beneficiarios-pagos', [App\Http\Controllers\ClienteController::class, 'beneficiarios_pagos'])->name('cliente.beneficiarios');
+Route::get('/cliente/{urlapi}', [App\Http\Controllers\ClienteController::class, 'show'])->name('cliente.show');
 
 // post
  Route::post('/crear_cliente', [App\Http\Controllers\ClienteController::class, 'crear_cliente'])->name('crear_cliente');
  Route::post('/search_dni', [App\Http\Controllers\ClienteController::class, 'search_dni'])->name('search_dni');
  Route::post('/search_ruc', [App\Http\Controllers\ClienteController::class, 'search_ruc'])->name('search_ruc');
  Route::post('/get_ciente', [App\Http\Controllers\ClienteController::class, 'get_ciente'])->name('get_ciente');
+ Route::post('/load_beneficiarios_pagos', [App\Http\Controllers\ClienteController::class, 'load_beneficiarios_pagos'])->name('load_beneficiarios_pagos');
 
 //  put
  Route::put('/editar_cliente', [App\Http\Controllers\ClienteController::class, 'editar_cliente'])->name('editar_cliente');

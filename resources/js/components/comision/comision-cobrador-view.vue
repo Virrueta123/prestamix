@@ -13,7 +13,10 @@
                     <span class="comision-profile__avatar">{{ iniciales }}</span>
                     <div>
                         <h1 class="comision-profile__name">{{ nombreTrabajador }}</h1>
-                        <p class="comision-profile__role">Cobrador · Comisión {{ porcentaje }}% del interés</p>
+                        <p class="comision-profile__role">
+                            Cobrador · {{ porcentaje }}% del interés
+                            · Empresa {{ porcentajeEmpresa }}%
+                        </p>
                     </div>
                 </div>
                 <div class="comision-profile__period">
@@ -68,7 +71,8 @@
                                     <th class="text-center">Préstamos</th>
                                     <th class="text-center">Cuotas</th>
                                     <th class="text-right">Interés</th>
-                                    <th class="text-right">Comisión pagada</th>
+                                    <th class="text-right">Comisión ({{ porcentaje }}%)</th>
+                                    <th class="text-right">Empresa ({{ porcentajeEmpresa }}%)</th>
                                     <th>Fecha pago</th>
                                     <th>Gasto</th>
                                 </tr>
@@ -78,9 +82,14 @@
                                     <td class="font-medium">{{ h.mes_nombre }} {{ h.anio }}</td>
                                     <td class="text-center">{{ h.prestamos_count ?? '—' }}</td>
                                     <td class="text-center">{{ h.detalles_count }}</td>
-                                    <td class="text-right">{{ formatear_dinero_soles(h.monto_interes_pagado) }}</td>
+                                    <td class="text-right">S/ {{ formatear_dinero_soles(h.monto_interes_pagado) }}</td>
                                     <td class="text-right">
-                                        <span class="comision-monto comision-monto--paid">{{ formatear_dinero_soles(h.monto_acumulado) }}</span>
+                                        <span class="comision-monto comision-monto--paid">S/ {{ formatear_dinero_soles(h.monto_acumulado) }}</span>
+                                    </td>
+                                    <td class="text-right">
+                                        <span class="comision-monto comision-monto--empresa">
+                                            S/ {{ formatear_dinero_soles(empresaDePeriodo(h)) }}
+                                        </span>
                                     </td>
                                     <td class="text-sm">{{ formatear_fecha(h.fecha_procesado) }}</td>
                                     <td><span class="comision-code">{{ h.gasto?.codigo ?? '—' }}</span></td>
@@ -118,12 +127,16 @@
                                 <span class="comision-kpi__lbl">Cuotas</span>
                             </div>
                             <div class="comision-kpi">
-                                <span class="comision-kpi__val">{{ formatear_dinero_soles(sumaInteresDetalle) }}</span>
+                                <span class="comision-kpi__val">S/ {{ formatear_dinero_soles(sumaInteresDetalle) }}</span>
                                 <span class="comision-kpi__lbl">Interés cobrado</span>
                             </div>
                             <div class="comision-kpi comision-kpi--primary">
-                                <span class="comision-kpi__val">{{ formatear_dinero_soles(sumaComisionDetalle) }}</span>
-                                <span class="comision-kpi__lbl">Comisión {{ resumen.totales.porcentaje }}%</span>
+                                <span class="comision-kpi__val">S/ {{ formatear_dinero_soles(sumaComisionDetalle) }}</span>
+                                <span class="comision-kpi__lbl">Cobrador {{ porcentaje }}%</span>
+                            </div>
+                            <div class="comision-kpi comision-kpi--empresa">
+                                <span class="comision-kpi__val">S/ {{ formatear_dinero_soles(sumaEmpresaDetalle) }}</span>
+                                <span class="comision-kpi__lbl">Empresa {{ porcentajeEmpresa }}%</span>
                             </div>
                         </div>
 
@@ -141,9 +154,13 @@
                                     <div class="comision-prestamo__totals">
                                         <span>{{ grupo.cuotas }} cuota(s)</span>
                                         <span class="comision-prestamo__sep">·</span>
-                                        <span>Interés {{ formatear_dinero_soles(grupo.interes_total) }}</span>
+                                        <span>Interés S/ {{ formatear_dinero_soles(grupo.interes_total) }}</span>
                                         <span class="comision-prestamo__sep">·</span>
-                                        <span class="comision-monto">{{ formatear_dinero_soles(grupo.comision_total) }}</span>
+                                        <span class="comision-monto">Cobr. S/ {{ formatear_dinero_soles(grupo.comision_total) }}</span>
+                                        <span class="comision-prestamo__sep">·</span>
+                                        <span class="comision-monto comision-monto--empresa">
+                                            Emp. S/ {{ formatear_dinero_soles(empresaDeInteres(grupo.interes_total)) }}
+                                        </span>
                                     </div>
                                     <a
                                         v-if="grupo.planilla_url"
@@ -161,16 +178,22 @@
                                         <tr>
                                             <th>Detalle</th>
                                             <th class="text-right">Interés</th>
-                                            <th class="text-right">Comisión</th>
+                                            <th class="text-right">Comisión ({{ porcentaje }}%)</th>
+                                            <th class="text-right">Empresa ({{ porcentajeEmpresa }}%)</th>
                                             <th>Fecha</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr v-for="linea in grupo.lineas" :key="linea.comision_detalle_id">
                                             <td class="text-sm">{{ linea.descripcion }}</td>
-                                            <td class="text-right">{{ formatear_dinero_soles(linea.interes_pagado) }}</td>
+                                            <td class="text-right">S/ {{ formatear_dinero_soles(linea.interes_pagado) }}</td>
                                             <td class="text-right">
-                                                <span class="comision-monto">{{ formatear_dinero_soles(linea.comision_monto) }}</span>
+                                                <span class="comision-monto">S/ {{ formatear_dinero_soles(linea.comision_monto) }}</span>
+                                            </td>
+                                            <td class="text-right">
+                                                <span class="comision-monto comision-monto--empresa">
+                                                    S/ {{ formatear_dinero_soles(empresaDeInteres(linea.interes_pagado)) }}
+                                                </span>
                                             </td>
                                             <td class="text-sm text-slate-500">{{ formatear_fecha(linea.created_at) }}</td>
                                         </tr>
@@ -190,7 +213,8 @@
                                             <th>Cliente</th>
                                             <th class="text-center">Cuotas</th>
                                             <th class="text-right">Interés</th>
-                                            <th class="text-right">Comisión</th>
+                                            <th class="text-right">Comisión ({{ porcentaje }}%)</th>
+                                            <th class="text-right">Empresa ({{ porcentajeEmpresa }}%)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -198,9 +222,14 @@
                                             <td class="font-medium">#{{ g.prestamo_code }}</td>
                                             <td class="text-sm">{{ g.cliente_nombre }}</td>
                                             <td class="text-center">{{ g.cuotas }}</td>
-                                            <td class="text-right">{{ formatear_dinero_soles(g.interes_total) }}</td>
+                                            <td class="text-right">S/ {{ formatear_dinero_soles(g.interes_total) }}</td>
                                             <td class="text-right">
-                                                <span class="comision-monto">{{ formatear_dinero_soles(g.comision_total) }}</span>
+                                                <span class="comision-monto">S/ {{ formatear_dinero_soles(g.comision_total) }}</span>
+                                            </td>
+                                            <td class="text-right">
+                                                <span class="comision-monto comision-monto--empresa">
+                                                    S/ {{ formatear_dinero_soles(empresaDeInteres(g.interes_total)) }}
+                                                </span>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -208,11 +237,16 @@
                                         <tr>
                                             <td colspan="3" class="text-right font-semibold">Total acumulado</td>
                                             <td class="text-right font-semibold">
-                                                {{ formatear_dinero_soles(totalConfirmado ? totalInteresFinal : sumaInteresDetalle) }}
+                                                S/ {{ formatear_dinero_soles(totalConfirmado ? totalInteresFinal : sumaInteresDetalle) }}
                                             </td>
                                             <td class="text-right">
                                                 <span class="comision-checkout__total">
-                                                    {{ formatear_dinero_soles(totalConfirmado ? totalComisionFinal : sumaComisionDetalle) }}
+                                                    S/ {{ formatear_dinero_soles(totalConfirmado ? totalComisionFinal : sumaComisionDetalle) }}
+                                                </span>
+                                            </td>
+                                            <td class="text-right">
+                                                <span class="comision-monto comision-monto--empresa">
+                                                    S/ {{ formatear_dinero_soles(totalConfirmado ? totalEmpresaFinal : sumaEmpresaDetalle) }}
                                                 </span>
                                             </td>
                                         </tr>
@@ -284,6 +318,7 @@
 <script>
 import Axios from 'axios';
 import { myMixin } from '../../mixin.js';
+import { porcentajeEmpresa, empresaDesdeInteres } from '../../utils/comisionHelper.js';
 
 export default {
     mixins: [myMixin],
@@ -304,6 +339,7 @@ export default {
             totalConfirmado: false,
             totalComisionFinal: 0,
             totalInteresFinal: 0,
+            totalEmpresaFinal: 0,
             montoPago: 0,
             calculando: false,
             procesando: false,
@@ -330,6 +366,9 @@ export default {
         mesLabel() {
             return this.meses.find((m) => m.val === this.mes)?.label ?? '';
         },
+        porcentajeEmpresa() {
+            return porcentajeEmpresa(this.porcentaje);
+        },
         sumaInteresDetalle() {
             if (!this.resumen?.por_prestamo) return 0;
             return this.resumen.por_prestamo.reduce((s, g) => s + parseFloat(g.interes_total || 0), 0);
@@ -337,6 +376,9 @@ export default {
         sumaComisionDetalle() {
             if (!this.resumen?.por_prestamo) return 0;
             return this.resumen.por_prestamo.reduce((s, g) => s + parseFloat(g.comision_total || 0), 0);
+        },
+        sumaEmpresaDetalle() {
+            return Math.round((this.sumaInteresDetalle - this.sumaComisionDetalle) * 100) / 100;
         },
         montoAjustadoManual() {
             if (!this.totalConfirmado) return false;
@@ -347,6 +389,12 @@ export default {
         this.cargar();
     },
     methods: {
+        empresaDeInteres(interes) {
+            return empresaDesdeInteres(interes, this.porcentaje);
+        },
+        empresaDePeriodo(h) {
+            return empresaDesdeInteres(h.monto_interes_pagado, this.porcentaje);
+        },
         formatear_fecha(fecha) {
             if (!fecha) return '—';
             return new Date(fecha).toLocaleString('es-PE');
@@ -355,6 +403,7 @@ export default {
             this.totalConfirmado = false;
             this.totalComisionFinal = 0;
             this.totalInteresFinal = 0;
+            this.totalEmpresaFinal = 0;
             this.montoPago = 0;
         },
         volver() {
@@ -372,6 +421,7 @@ export default {
                 this.totalConfirmado = true;
                 this.totalComisionFinal = parseFloat(data.totales.comision || 0);
                 this.totalInteresFinal = parseFloat(data.totales.interes || 0);
+                this.totalEmpresaFinal = Math.round((this.totalInteresFinal - this.totalComisionFinal) * 100) / 100;
                 this.montoPago = this.totalComisionFinal;
             }
         },
@@ -698,6 +748,10 @@ export default {
     background: #f0fdf4;
 }
 
+.comision-kpi--empresa {
+    background: #eff6ff;
+}
+
 .comision-kpi__val {
     display: block;
     font-size: 1.15rem;
@@ -707,6 +761,10 @@ export default {
 
 .comision-kpi--primary .comision-kpi__val {
     color: #05be50;
+}
+
+.comision-kpi--empresa .comision-kpi__val {
+    color: #1e40af;
 }
 
 .comision-kpi__lbl {
@@ -836,6 +894,10 @@ export default {
 
 .comision-monto--paid {
     color: #15803d;
+}
+
+.comision-monto--empresa {
+    color: #1e40af;
 }
 
 .comision-code {

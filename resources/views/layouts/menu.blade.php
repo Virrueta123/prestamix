@@ -88,6 +88,12 @@
                     <div class="side-menu__title"> Tabla cliente </div>
                 </a>
             </li>
+            <li>
+                <a href="{{ route('cliente.beneficiarios') }}" class="side-menu">
+                    <div class="side-menu__icon"> <i class="fa-solid fa-hand-holding-dollar"></i></div>
+                    <div class="side-menu__title"> Beneficiarios que pagan </div>
+                </a>
+            </li>
 
         </ul>
     </li>

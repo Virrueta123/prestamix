@@ -167,7 +167,9 @@
                     <label for="vertical-form-2" class="form-label">Numero de cuenta para esta
                         <strong>solicitud</strong> </label>
                     <input name="solicitud_tarjeta" v-model="solicitud_tarjeta" type="text" class="form-control"
-                        placeholder="Numero de la tarjeta">
+                        inputmode="numeric"
+                        maxlength="24"
+                        placeholder="Mínimo 9 dígitos">
                 </div>
             </div>
 
@@ -590,8 +592,8 @@ export default {
                     required: true,
                 },
                 solicitud_tarjeta: {
-                    minlength: 2,
-                    maxlength: 60,
+                    minlength: 9,
+                    maxlength: 24,
                     digits: true,
                 },
                 solicitud_entidad_tarjeta: {

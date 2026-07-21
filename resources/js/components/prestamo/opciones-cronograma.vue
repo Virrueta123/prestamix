@@ -66,36 +66,8 @@
             </tbody>
         </table>
 
-        <div id="cronogram_print" style="display: none;">
-            <center>
-                <img class="card-img-top" width="28%" src="../../../../public/dist/images/logo/logo.svg" alt="">
-            </center>
-
-            <div class="box p-5 rounded-md mt-5">
-
-                <div class="flex items-center mt-5 border-b border-slate-200/60 dark:border-darkmode-400 pb-5 mb-5">
-                    <div class="font-medium text-base truncate">
-                        <Icon icon="user" class="mr-2 text-primary" />Información del cliente
-                    </div>
-                </div>
-                <div class="flex items-center">
-                    <Icon icon="check" class="mr-2 text-primary" /> Nombres y apellidos:
-                    <div class="ml-auto">{{ get_cuota.solicitud.cliente.cli_nombre }} {{
-                        get_cuota.solicitud.cliente.cli_apellido }}</div>
-                </div>
-                <hr>
-
-                <div class="flex items-center">
-                    <Icon icon="check" class="mr-2 text-primary" /> Dni:
-                    <div class="ml-auto">{{ get_cuota.solicitud.cliente.cli_dni }}</div>
-                </div>
-                <hr>
-
-                <hr>
-
-            </div>
-
-        </div>
+        <!-- Cabecera de impresión se genera en JS con branding Horizon -->
+        <div id="cronogram_print" style="display: none;"></div>
 
     </ScrollPanel>
 
@@ -136,6 +108,15 @@ import TomSelect from 'tom-select';
 import Axios from 'axios';
 
 import moment from "moment";
+import {
+    BRAND,
+    money,
+    jsPDF,
+    drawHorizonHeader,
+    drawHorizonFooter,
+    horizonPrintHeaderHtml,
+    loadImageBase64,
+} from '../../utils/horizonPdf.js';
 
 export default {
     mixins: [myMixin],
@@ -151,10 +132,233 @@ export default {
             get_ingresos: [],
             is_opciones_modal_cronograma: false,
             is_opciones_modal_cronograma_pago: false,
-            is_opciones_modal_cronograma_pago_grupal: false
+            is_opciones_modal_cronograma_pago_grupal: false,
+            exportandoPdf: false,
+            logoDataUrl: null,
         };
     },
+    computed: {
+        clienteNombre() {
+            const c = this.get_cuota?.solicitud?.cliente;
+            if (!c) return this.get_cuota?.solicitud?.solicitud_nombre || '—';
+            return `${c.cli_nombre || ''} ${c.cli_apellido || ''}`.trim() || '—';
+        },
+        clienteDni() {
+            return this.get_cuota?.solicitud?.cliente?.cli_dni
+                || this.get_cuota?.solicitud?.solicitud_documento
+                || '—';
+        },
+        prestamoCode() {
+            return this.get_cuota?.solicitud?.code
+                || this.get_cuota?.code
+                || '—';
+        },
+    },
     methods: {
+        buildPrintHeaderHtml() {
+            const p = this.get_cuota || {};
+            return horizonPrintHeaderHtml({
+                title: 'Estado del cronograma',
+                subtitle: 'Cronograma de pagos con interés',
+                clienteNombre: this.clienteNombre,
+                clienteDni: this.clienteDni,
+                prestamoCode: this.prestamoCode,
+                logoDataUrl: this.logoDataUrl,
+                extraLines: [
+                    { label: 'Monto crédito', value: 'S/ ' + money(p.moto_credito) },
+                    { label: 'Frecuencia', value: p.frecuencia_pagos || '—' },
+                    { label: 'Tasa de interés', value: (p.interes != null ? p.interes + ' %' : '—') },
+                    { label: 'Plazo', value: (p.intervalo != null ? p.intervalo + ' ' + (p.frecuencia_pagos || '') : '—') },
+                ],
+            });
+        },
+
+        estadoCuotaLabel(row) {
+            if (row.yes_pago === 'Y' || row.status === 'A') return 'Pagado';
+            const fechaDada = moment(row.fechaVencimiento);
+            const hoy = moment();
+            if (fechaDada.isBefore(hoy, 'day')) return 'Vencido';
+            if (fechaDada.isSame(hoy, 'day')) return 'Pendiente / Hoy';
+            return 'Pendiente';
+        },
+
+        interesMostrado(row) {
+            if (row.yes_interes === 'N') return 0;
+            return parseFloat(row.interes) || 0;
+        },
+
+        cuotaMostrada(row) {
+            if (row.yes_interes === 'Y') return parseFloat(row.cuota) || 0;
+            return parseFloat(row.amortizacion) || 0;
+        },
+
+        /**
+         * PDF estado del cronograma (misma plantilla Horizon que simulación).
+         */
+        async exportarPDFCronograma() {
+            const rows = Array.isArray(this.cronogramas) ? this.cronogramas : [];
+            if (!rows.length) {
+                this.alert_warning('No hay cuotas del cronograma para exportar.');
+                return;
+            }
+
+            this.exportandoPdf = true;
+            try {
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pageW = doc.internal.pageSize.getWidth();
+                const marginX = 12;
+                const p = this.get_cuota || {};
+
+                // Cabecera idéntica a simulación (azul primary full-width + franja verde)
+                let y = await drawHorizonHeader(doc, {
+                    title: 'Estado del cronograma',
+                    subtitle: 'Cronograma de pagos con interés',
+                    marginX,
+                });
+
+                // Cajas de resumen (mismo estilo que simulación)
+                doc.setTextColor(...BRAND.slate900);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.text('Resumen del préstamo', marginX, y);
+                y += 4;
+
+                const boxW = (pageW - marginX * 2 - 6) / 4;
+                const boxH = 18;
+                const resumenItems = [
+                    { label: 'Monto crédito', value: 'S/ ' + money(p.moto_credito) },
+                    { label: 'Plazo', value: `${p.intervalo ?? '—'} ${p.frecuencia_pagos || ''}`.trim() },
+                    { label: 'Tasa de interés', value: p.interes != null ? `${p.interes} %` : '—' },
+                    { label: 'N° préstamo', value: String(this.prestamoCode) },
+                ];
+                resumenItems.forEach((item, i) => {
+                    const x = marginX + i * (boxW + 2);
+                    doc.setFillColor(...BRAND.slate50);
+                    doc.setDrawColor(...BRAND.slate100);
+                    doc.roundedRect(x, y, boxW, boxH, 1.5, 1.5, 'FD');
+                    doc.setTextColor(...BRAND.slate600);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(7);
+                    doc.text(String(item.label).toUpperCase(), x + 3, y + 6);
+                    doc.setTextColor(...BRAND.primary);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(9);
+                    const val = String(item.value);
+                    doc.text(val.length > 18 ? val.slice(0, 17) + '…' : val, x + 3, y + 13);
+                });
+                y += boxH + 5;
+
+                // Banda datos cliente (fondo slate-50 como simulación)
+                doc.setFillColor(...BRAND.slate50);
+                doc.roundedRect(marginX, y, pageW - marginX * 2, 14, 1.5, 1.5, 'F');
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(...BRAND.slate600);
+                const metaY = y + 9;
+                doc.text(`Cliente: ${this.clienteNombre}`, marginX + 4, metaY);
+                doc.text(`DNI: ${this.clienteDni}`, marginX + 95, metaY);
+                doc.setTextColor(...BRAND.primary);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Cobrador: ${p.cobrador_nombre || p.analista || '—'}`, pageW - marginX - 4, metaY, { align: 'right' });
+                y += 18;
+
+                // Totales
+                let totalInteres = 0;
+                let totalCuota = 0;
+                let totalPagado = 0;
+                rows.forEach((r) => {
+                    totalInteres += this.interesMostrado(r);
+                    totalCuota += this.cuotaMostrada(r);
+                    totalPagado += parseFloat(r.pagado) || 0;
+                });
+
+                const head = [[
+                    '#', 'Vencimiento', 'Saldo cap.', 'Amortiz.', 'Interés', 'Cuota', 'Pagado', 'Estado'
+                ]];
+                const body = rows.map((r) => [
+                    String(r.periodo ?? ''),
+                    String(r.fechaVencimiento ?? ''),
+                    'S/ ' + money(r.saldoCapital),
+                    'S/ ' + money(r.amortizacion),
+                    'S/ ' + money(this.interesMostrado(r)),
+                    'S/ ' + money(this.cuotaMostrada(r)),
+                    'S/ ' + money(r.pagado),
+                    this.estadoCuotaLabel(r),
+                ]);
+
+                body.push([
+                    { content: 'TOTALES', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: 'S/ ' + money(totalInteres), styles: { fontStyle: 'bold' } },
+                    { content: 'S/ ' + money(totalCuota), styles: { fontStyle: 'bold', textColor: BRAND.primary } },
+                    { content: 'S/ ' + money(totalPagado), styles: { fontStyle: 'bold' } },
+                    '',
+                ]);
+
+                doc.autoTable({
+                    startY: y,
+                    head,
+                    body,
+                    theme: 'grid',
+                    margin: { left: marginX, right: marginX, bottom: 22 },
+                    styles: {
+                        font: 'helvetica',
+                        fontSize: 7.5,
+                        cellPadding: 1.8,
+                        valign: 'middle',
+                        textColor: BRAND.slate900,
+                        lineColor: [226, 232, 240],
+                        lineWidth: 0.2,
+                    },
+                    headStyles: {
+                        fillColor: BRAND.primary,
+                        textColor: BRAND.white,
+                        fontStyle: 'bold',
+                        fontSize: 7,
+                        halign: 'center',
+                    },
+                    alternateRowStyles: { fillColor: BRAND.slate50 },
+                    columnStyles: {
+                        0: { halign: 'center', cellWidth: 10, fontStyle: 'bold' },
+                        1: { halign: 'center', cellWidth: 24 },
+                        2: { halign: 'right' },
+                        3: { halign: 'right' },
+                        4: { halign: 'right' },
+                        5: { halign: 'right', fontStyle: 'bold', textColor: BRAND.primary },
+                        6: { halign: 'right' },
+                        7: { halign: 'center', cellWidth: 22 },
+                    },
+                    didParseCell: (data) => {
+                        if (data.section === 'body' && data.row.index === body.length - 1) {
+                            data.cell.styles.fillColor = [219, 234, 254];
+                        }
+                        // Colorear estado
+                        if (data.section === 'body' && data.column.index === 7 && data.row.index < body.length - 1) {
+                            const txt = String(data.cell.raw || '');
+                            if (txt === 'Pagado') data.cell.styles.textColor = [5, 150, 105];
+                            else if (txt === 'Vencido') data.cell.styles.textColor = [220, 38, 38];
+                            else if (txt.includes('Hoy')) data.cell.styles.textColor = [217, 119, 6];
+                        }
+                    },
+                    didDrawPage: () => {
+                        drawHorizonFooter(
+                            doc,
+                            marginX,
+                            'Estado del cronograma · HORIZON · Documento informativo'
+                        );
+                    },
+                });
+
+                const code = String(this.prestamoCode).replace(/[^\w-]/g, '');
+                doc.save(`Cronograma-Estado-${code}-${moment().format('DD-MM-YYYY')}.pdf`);
+                this.alert_success?.('PDF del estado del cronograma generado correctamente');
+            } catch (err) {
+                console.error(err);
+                this.alert_error_modal?.('No se pudo generar el PDF del cronograma');
+            } finally {
+                this.exportandoPdf = false;
+            }
+        },
+
         // cargar todo los ingresos de este prestamo
         load_ingresos() {
             if (!this.get_cuota?.solicitud?.urlapi) {
@@ -343,54 +547,88 @@ export default {
                     "buttons": [{
                         text: '<i class="fa fa-bars"></i> columnas visibles',
                         extend: 'colvis',
-                    }
-                        , {
+                    },
+                    {
+                        text: self.exportandoPdf
+                            ? '<i class="fa fa-spinner fa-spin"></i> PDF...'
+                            : '<i class="fa fa-file-pdf"></i> PDF cronograma',
+                        action: function () {
+                            self.exportarPDFCronograma();
+                        },
+                    },
+                    {
                         extend: 'print',
+                        text: '<i class="fa fa-print"></i> Imprimir',
+                        title: '',
                         customize: function (win) {
-                            $(win.document.body)
-                                .css('font-size', '10pt')
-                                .prepend(
-                                    $("#cronogram_print").html()
-                                );
-                            ;
+                            // Fondo azul forzado (igual simulación) + logo en base64
+                            const headerHtml = self.buildPrintHeaderHtml();
+                            const $body = $(win.document.body);
+                            $body
+                                .css({
+                                    'font-size': '10pt',
+                                    'font-family': 'Helvetica, Arial, sans-serif',
+                                    color: '#0f172a',
+                                    margin: '0',
+                                    padding: '8px',
+                                })
+                                .prepend(headerHtml);
 
-                            $(win.document.body).find('table thead th:nth-child(11)').remove();
-                            $(win.document.body).find('table thead th:nth-child(12)').remove();
-                            $(win.document.body).find('table thead th:nth-child(13)').remove();
-                            $(win.document.body).find('table thead th:nth-child(14)').remove();
-                            $(win.document.body).find('table thead th:nth-child(15)').remove();
-                            $(win.document.body).find('table thead th:nth-child(16)').remove();
-                            $(win.document.body).find('table thead th:nth-child(17)').remove();
-                            $(win.document.body).find('table thead th:nth-child(18)').remove();
-                            $(win.document.body).find('table thead th:nth-child(19)').remove();
+                            // Estilos de impresión: conservar fondos de color
+                            const style = win.document.createElement('style');
+                            style.textContent = `
+                                @media print {
+                                    * {
+                                        -webkit-print-color-adjust: exact !important;
+                                        print-color-adjust: exact !important;
+                                        color-adjust: exact !important;
+                                    }
+                                    thead th {
+                                        background-color: #1e40af !important;
+                                        color: #fff !important;
+                                    }
+                                }
+                                thead th {
+                                    background-color: #1e40af !important;
+                                    color: #fff !important;
+                                    -webkit-print-color-adjust: exact !important;
+                                    print-color-adjust: exact !important;
+                                }
+                            `;
+                            win.document.head.appendChild(style);
 
-
-
-                            $(".no_mostrar_print").css('background', 'red');
-
-
-
-                            $(".no_mostrar_print").remove();
-
-                            $(win.document.body).find('table tbody tr').each(function () {
-
-                                $(this).find('td:nth-child(11)').remove();
-                                $(this).find('td:nth-child(12)').remove();
-                                $(this).find('td:nth-child(13)').remove();
-                                $(this).find('td:nth-child(14)').remove();
-                                $(this).find('td:nth-child(15)').remove();
-                                $(this).find('td:nth-child(16)').remove();
-                                $(this).find('td:nth-child(17)').remove();
-                                $(this).find('td:nth-child(18)').remove();
-                                $(this).find('td:nth-child(19)').remove();
+                            // Quitar columnas de acciones / checks (no imprimibles)
+                            for (let i = 19; i >= 11; i--) {
+                                $body.find('table thead th:nth-child(' + i + ')').remove();
+                            }
+                            $body.find('.no_mostrar_print').remove();
+                            $body.find('table tbody tr').each(function () {
+                                for (let i = 19; i >= 11; i--) {
+                                    $(this).find('td:nth-child(' + i + ')').remove();
+                                }
                             });
 
-
-                            $(win.document.body).find('table')
+                            $body.find('table')
                                 .addClass('compact')
-                                .css('font-size', 'inherit');
-
-                        }
+                                .css({
+                                    'font-size': '9pt',
+                                    'width': '100%',
+                                    'border-collapse': 'collapse',
+                                });
+                            $body.find('table thead th').css({
+                                'background-color': '#1e40af',
+                                'background': '#1e40af',
+                                'color': '#fff',
+                                'padding': '6px 4px',
+                                'font-size': '8pt',
+                                '-webkit-print-color-adjust': 'exact',
+                                'print-color-adjust': 'exact',
+                            });
+                            $body.find('table tbody td').css({
+                                'padding': '4px',
+                                'border': '1px solid #e2e8f0',
+                            });
+                        },
                     },
                     {
                         text: '<i class="fa fa-calendar-days"></i> Reprogramacion', // Texto del botón extra
@@ -927,6 +1165,11 @@ export default {
         }
     },
     mounted() {
+        // Precargar logo Horizon para impresión (fondo azul + logo blanco)
+        loadImageBase64().then((logo) => {
+            if (logo?.dataUrl) this.logoDataUrl = logo.dataUrl;
+        }).catch(() => {});
+
         this.loading_start('Cargando cronograma...');
 
         Promise.all([
@@ -935,6 +1178,7 @@ export default {
         ]).then(([ingresos, cronogramas]) => {
             this.get_ingresos = ingresos || [];
             const filas = Array.isArray(cronogramas) ? cronogramas : [];
+            this.cronogramas = filas;
             this.load_cronogramas_datatable(filas);
 
             const ultimoPeriodo = filas[filas.length - 1];

@@ -27,3 +27,17 @@ export function interesCuotaParaComision(pG) {
 export function comisionDesdeInteres(interes, porcentaje) {
     return Math.round(interes * (parseFloat(porcentaje) / 100) * 100) / 100;
 }
+
+/** % que se queda la empresa: 100 - % comisión del cobrador (ej. 30% cobrador → 70% empresa). */
+export function porcentajeEmpresa(porcentajeComision) {
+    const p = parseFloat(porcentajeComision);
+    if (Number.isNaN(p)) return 0;
+    return Math.round((100 - p) * 100) / 100;
+}
+
+/** Monto de interés que gana la empresa (interés − comisión del cobrador). */
+export function empresaDesdeInteres(interes, porcentajeComision) {
+    const i = parseFloat(interes) || 0;
+    const comision = comisionDesdeInteres(i, porcentajeComision);
+    return Math.round((i - comision) * 100) / 100;
+}

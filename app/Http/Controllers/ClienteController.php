@@ -11,6 +11,7 @@ use App\Models\Solicitud;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Peru\Jne\DniFactory;
@@ -414,6 +415,153 @@ class ClienteController extends Controller
                 'error' => '',
                 'success' => true,
                 'data' => '',
+            ]);
+        } catch (\Throwable $th) {
+            Log::error($th->getMessage());
+            return response()->json([
+                'message' => 'error del servidor',
+                'error' => $th->getMessage(),
+                'success' => false,
+                'data' => '',
+            ]);
+        }
+    }
+
+    /**
+     * Vista: lista de beneficiarios que van pagando + gráfico de intereses.
+     */
+    public function beneficiarios_pagos()
+    {
+        return view('modules.cliente.beneficiarios');
+    }
+
+    /**
+     * API: pagos de beneficiarios (más recientes primero) + intereses mensuales.
+     */
+    public function load_beneficiarios_pagos(Request $request)
+    {
+        try {
+            $fechaInicio = $request->input('fecha_inicio');
+            $fechaFin = $request->input('fecha_fin');
+            $sucursalId = Auth::user()->sucursal_id;
+
+            $base = DB::table('ingreso as i')
+                ->join('detalle_ingreso as di', 'di.ingreso_id', '=', 'i.ingreso_id')
+                ->join('cronograma as c', 'c.cronograma_id', '=', 'di.cronograma_id')
+                ->join('prestamos as p', 'p.prestamo_id', '=', 'i.prestamo_id')
+                ->join('solicitud as s', 's.solicitud_id', '=', 'p.solicitud_id')
+                ->join('cliente as cl', 'cl.cli_id', '=', 's.cli_id')
+                ->whereNull('i.deleted_at')
+                ->whereNull('di.deleted_at')
+                ->where('i.sucursal_id', $sucursalId)
+                ->whereNotNull('i.prestamo_id')
+                ->where('i.prestamo_id', '>', 0);
+
+            if (!empty($fechaInicio)) {
+                $base->whereDate('i.created_at', '>=', $fechaInicio);
+            }
+            if (!empty($fechaFin)) {
+                $base->whereDate('i.created_at', '<=', $fechaFin);
+            }
+
+            $pagos = (clone $base)
+                ->select([
+                    'i.ingreso_id',
+                    'di.monto as monto_detalle',
+                    'i.codigo',
+                    'i.created_at as fecha_pago',
+                    'i.descripcion',
+                    'cl.cli_id',
+                    'cl.cli_nombre',
+                    'cl.cli_apellido',
+                    'cl.cli_dni',
+                    'c.periodo',
+                    'c.interes',
+                    'c.cuota',
+                    'c.yes_interes',
+                    'c.amortizacion',
+                    'c.yes_pago',
+                    'p.serie as prestamo_serie',
+                    'p.frecuencia_pagos',
+                    'p.prestamo_id',
+                ])
+                ->orderByDesc('i.created_at')
+                ->get()
+                ->map(function ($row) {
+                    $interes = ($row->yes_interes === 'Y') ? (float) $row->interes : 0.0;
+
+                    return [
+                        'ingreso_id' => $row->ingreso_id,
+                        'cliente' => trim(($row->cli_nombre ?? '') . ' ' . ($row->cli_apellido ?? '')),
+                        'cli_dni' => $row->cli_dni,
+                        'prestamo' => sprintf('%06d', $row->prestamo_serie),
+                        'periodo' => $row->periodo,
+                        'cuota' => (float) $row->cuota,
+                        'monto_pagado' => (float) $row->monto_detalle,
+                        'interes' => round($interes, 2),
+                        'amortizacion' => (float) $row->amortizacion,
+                        'yes_interes' => $row->yes_interes,
+                        'frecuencia_pagos' => $row->frecuencia_pagos,
+                        'descripcion' => $row->descripcion,
+                        'fecha_pago' => $row->fecha_pago
+                            ? Carbon::parse($row->fecha_pago)->format('Y-m-d H:i:s')
+                            : null,
+                        'fecha_pago_fmt' => $row->fecha_pago
+                            ? Carbon::parse($row->fecha_pago)->format('d/m/Y H:i')
+                            : '—',
+                    ];
+                })
+                ->values();
+
+            // Gráfico: interés cobrado por mes (mismo filtro de fechas)
+            $mensualRaw = (clone $base)
+                ->selectRaw("
+                    YEAR(i.created_at) as anio,
+                    MONTH(i.created_at) as mes,
+                    SUM(CASE WHEN c.yes_interes = 'Y' THEN c.interes ELSE 0 END) as total_interes,
+                    SUM(di.monto) as total_pagado,
+                    COUNT(*) as cantidad
+                ")
+                ->groupBy(DB::raw('YEAR(i.created_at)'), DB::raw('MONTH(i.created_at)'))
+                ->orderBy(DB::raw('YEAR(i.created_at)'))
+                ->orderBy(DB::raw('MONTH(i.created_at)'))
+                ->get();
+
+            $mesesNombres = [
+                1 => 'Ene', 2 => 'Feb', 3 => 'Mar', 4 => 'Abr',
+                5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
+                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic',
+            ];
+
+            $grafico = [
+                'labels' => [],
+                'intereses' => [],
+                'pagos' => [],
+            ];
+
+            foreach ($mensualRaw as $m) {
+                $label = ($mesesNombres[(int) $m->mes] ?? $m->mes) . ' ' . $m->anio;
+                $grafico['labels'][] = $label;
+                $grafico['intereses'][] = round((float) $m->total_interes, 2);
+                $grafico['pagos'][] = round((float) $m->total_pagado, 2);
+            }
+
+            $totalInteres = $pagos->sum('interes');
+            $totalPagado = $pagos->sum('monto_pagado');
+
+            return response()->json([
+                'message' => 'Datos cargados correctamente',
+                'error' => '',
+                'success' => true,
+                'data' => [
+                    'pagos' => $pagos,
+                    'grafico' => $grafico,
+                    'resumen' => [
+                        'total_registros' => $pagos->count(),
+                        'total_interes' => round($totalInteres, 2),
+                        'total_pagado' => round($totalPagado, 2),
+                    ],
+                ],
             ]);
         } catch (\Throwable $th) {
             Log::error($th->getMessage());
