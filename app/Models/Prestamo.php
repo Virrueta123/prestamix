@@ -68,8 +68,13 @@ class Prestamo extends Model
     }
  
     public function getFechainicioAttribute()
-    {  
-            return $this->created_at; 
+    {
+        // Preferir la fecha real de desembolso si fue registrada (p. ej. préstamo con fecha anterior)
+        if (!empty($this->attributes['fecha_inicio'] ?? null)) {
+            return $this->attributes['fecha_inicio'];
+        }
+
+        return $this->created_at;
     }
 
     public function getPaAttribute()

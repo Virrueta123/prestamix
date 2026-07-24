@@ -399,6 +399,25 @@ class SolicitudController extends Controller
                 $prestamo->tasa_diaria = $request->input('tasa_diaria');
                 $prestamo->is_fecha_pago = $request->input('is_fecha_pago') ? "A" : "N";
                 $prestamo->fecha_de_pago_cuota = $request->input('is_fecha_pago') ? $request->input('fecha_de_pago_cuota') : NULL;
+
+                // Fecha real de desembolso (puede ser anterior a hoy si se registra un préstamo ya entregado)
+                $fechaInicioRaw = $request->input('fecha_inicio')
+                    ?: $request->input('fecha')
+                    ?: $request->input('fecha_desembolso');
+                if (!empty($fechaInicioRaw)) {
+                    try {
+                        $prestamo->fecha_inicio = Carbon::parse($fechaInicioRaw)->format('Y-m-d');
+                    } catch (\Throwable $e) {
+                        $fechaObj = DateTime::createFromFormat('d/n/Y', $fechaInicioRaw)
+                            ?: DateTime::createFromFormat('d/m/Y', $fechaInicioRaw);
+                        $prestamo->fecha_inicio = $fechaObj
+                            ? $fechaObj->format('Y-m-d')
+                            : Carbon::now()->format('Y-m-d');
+                    }
+                } else {
+                    $prestamo->fecha_inicio = Carbon::now()->format('Y-m-d');
+                }
+
                 $prestamo->status = "A";
                 $prestamo->save();
 

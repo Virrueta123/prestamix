@@ -293,10 +293,24 @@
                             </div>
                         </div>
 
-                        <div class="intro-y col-span-12 lg:col-span-6">
+                        <div class="intro-y col-span-12 lg:col-span-3">
                             <label for="vertical-form-2" class="form-label"> Destino </label>
                             <input name="destino" v-model="destino" type="text" class="form-control"
                                 placeholder="Destino">
+                        </div>
+
+                        <div class="intro-y col-span-12 lg:col-span-3">
+                            <label for="fecha-desembolso" class="form-label"> Fecha de desembolso </label>
+                            <div class="input-group">
+                                <div class="input-group-text">
+                                    <Icon icon="calendar" />
+                                </div>
+                                <input id="fecha-desembolso" name="fecha_desembolso" v-model="fecha" type="date"
+                                    class="form-control" title="Puede ser una fecha anterior si el préstamo ya se entregó">
+                            </div>
+                            <small class="text-slate-500">
+                                Si prestaste hace días, elige esa fecha para que el cronograma coincida con la realidad.
+                            </small>
                         </div>
 
                     </div>
@@ -335,14 +349,14 @@
                     <div class="mt-4"></div>
                     <hr>
 
-                    <div class="grid grid-cols-12 gap-6 mt-2">
+                    <div class="grid grid-cols-12 gap-6 mt-2" v-if="frecuencia_pagos == 'Mensual'">
 
                         <div class=" col-span-12 lg:col-span-6">
                             <label for="vertical-form-2" class="form-label" id="switch1">Este pago es en
                                 <strong>Deseas cambiar la fecha de las cuotas del prestamo?</strong>
                                 <br>
                                 <span class="text-danger">
-                                    <Icon icon="info-circle" /> Ojo la fecha debe ser menor a 20 dias de la fecha de hoy
+                                    <Icon icon="info-circle" /> Ojo la fecha como máximo son 20 días desde la fecha de desembolso
                                 </span>
                             </label>
 
@@ -356,8 +370,8 @@
                     </div>
 
 
-                    <div class=" col-span-12 lg:col-span-12 mt-3" v-if="is_fecha_pago">
-                        <label for="vertical-form-2" class="form-label"> Fecha de nacimiento </label>
+                    <div class=" col-span-12 lg:col-span-12 mt-3" v-if="frecuencia_pagos == 'Mensual' && is_fecha_pago">
+                        <label for="vertical-form-2" class="form-label"> Fecha de donde empezará la primera cuota </label>
                         <datepicker class="form-control col-span-12" v-model="fecha_de_pago_cuota"
                             placeholder="hacer click para seleccionar" :styles="{ border: '2px solid #00ff00' }"
                             :disabled-dates="rango_maximo" language="es"></datepicker>
@@ -778,7 +792,8 @@ export default {
             tasa_diaria: 0,
             cuotas: 0,
             cuota_final: 0,
-            fecha_desembolso: null,
+            fecha: moment().format("YYYY-MM-DD"),
+            fecha_desembolso: moment().format("DD/M/YYYY"),
             frecuencia_pagos: "Quincenal",
             frecuencia_pagos_a: "Quincenas",
             interes: 20,
@@ -792,14 +807,37 @@ export default {
         }
     },
     watch: {
+        fecha(newValue) {
+            if (!newValue) {
+                return;
+            }
+            this.fecha_desembolso = moment(newValue).format("DD/M/YYYY");
+            this.actualizarRangoFechaCuota();
+            // Si cambia la fecha de desembolso, hay que recalcular el cronograma
+            this.is_cronograma = false;
+            this.cronograma = [];
+        },
+        is_fecha_pago(newValue) {
+            if (!newValue) {
+                this.fecha_de_pago_cuota = null;
+            }
+            this.is_cronograma = false;
+            this.cronograma = [];
+        },
         frecuencia_pagos(newVal, oldVal) {
+            this.is_cronograma = false;
+            this.cronograma = [];
             switch (newVal) {
                 case "Quincenal":
                     this.frecuencia_pagos_a = "Quincenas";
+                    this.is_fecha_pago = false;
+                    this.fecha_de_pago_cuota = null;
                     break;
 
                 case "Semanal":
                     this.frecuencia_pagos_a = "Semanas";
+                    this.is_fecha_pago = false;
+                    this.fecha_de_pago_cuota = null;
                     break;
 
                 case "Mensual":
@@ -1176,12 +1214,16 @@ export default {
                 tasa_diaria: this.tasa_diaria,
                 cuotas: this.cuotas,
                 cuota_final: this.cuota_final,
+                fecha: this.fecha,
+                fecha_inicio: this.fecha,
                 fecha_desembolso: this.fecha_desembolso,
                 frecuencia_pagos: this.frecuencia_pagos,
                 interes: this.interes,
                 intervalo: this.intervalo,
                 is_fecha_pago: this.is_fecha_pago,
-                fecha_de_pago_cuota: moment(this.fecha_de_pago_cuota).format("YYYY-MM-DD"),
+                fecha_de_pago_cuota: this.fecha_de_pago_cuota
+                    ? moment(this.fecha_de_pago_cuota).format("YYYY-MM-DD")
+                    : null,
                 d_t: this.redondear(this.sumar_cuota),
                 solicitud_tarjeta: this.solicitud_tarjeta,
                 solicitud_entidad_tarjeta: this.solicitud_entidad_tarjeta,
@@ -1415,79 +1457,93 @@ export default {
                     console.error(error);
                 });
         },
+        actualizarRangoFechaCuota() {
+            const base = moment(this.fecha || undefined);
+            const hasta = base.clone().add(20, 'days');
+            this.rango_maximo = {
+                to: new Date(base.format("Y"), base.format("M") - 1, base.format("DD")),
+                from: new Date(hasta.format("Y"), hasta.format("M") - 1, hasta.format("DD")),
+            };
+        },
         //calcular cronograma del prestamo
         calcular_cronograma() {
+            if (!this.fecha) {
+                this.alert_warning("Debe indicar la fecha de desembolso");
+                return;
+            }
 
+            if (!this.intervalo || parseInt(this.intervalo) <= 0) {
+                this.alert_warning("Debe indicar el plazo (número de cuotas)");
+                return;
+            }
+
+            if (this.frecuencia_pagos === 'Mensual' && this.is_fecha_pago && !this.fecha_de_pago_cuota) {
+                this.alert_warning("Seleccione la fecha de inicio de la primera cuota");
+                return;
+            }
+
+            const fechaBase = this.fecha; // YYYY-MM-DD
 
             switch (this.frecuencia_pagos) {
 
                 case "Semanal":
-                    this.cronograma = this.calcularAmortizacionFrancesSemanal(
+                    this.cronograma = this.calcularAmortizacionFrancesSemanalByDate(
                         this.monto_credito,
                         parseInt(this.intervalo),
-                        parseInt(this.interes)
-                    )
+                        parseInt(this.interes),
+                        fechaBase
+                    );
                     break;
 
                 case "Quincenal":
                     this.cronograma = this.calcularAmortizacionFrancesQuincenal(
                         this.monto_credito,
                         parseInt(this.intervalo),
-                        parseInt(this.interes)
+                        parseInt(this.interes),
+                        fechaBase
                     );
                     break;
 
                 case "Mensual":
-
                     if (this.is_fecha_pago) {
-
+                        if (moment(fechaBase).isSame(moment(), 'day')) {
+                            this.cronograma = this.calcularAmortizacionFrancesMensual(
+                                this.monto_credito,
+                                parseInt(this.intervalo),
+                                parseInt(this.interes),
+                                this.fecha_de_pago_cuota
+                            );
+                        } else {
+                            this.cronograma = this.calcularAmortizacionFrancesMensualFechaDesembolsoCambiada(
+                                this.monto_credito,
+                                parseInt(this.intervalo),
+                                parseInt(this.interes),
+                                fechaBase,
+                                this.fecha_de_pago_cuota
+                            );
+                        }
+                    } else {
                         this.cronograma = this.calcularAmortizacionFrancesMensual(
                             this.monto_credito,
                             parseInt(this.intervalo),
                             parseInt(this.interes),
-                            this.fecha_de_pago_cuota
+                            fechaBase
                         );
-
-                    } else {
-
-                        this.cronograma = this.calcularAmortizacionFrancesMensual(
-                            this.monto_credito,
-                            parseInt(this.intervalo),
-                            parseInt(this.interes)
-                        );
-
                     }
-
+                    this.fecha_desembolso = moment(fechaBase).format("DD/M/YYYY");
                     break;
             }
 
-            if (this.is_fecha_pago) {
-
-                // Define las dos fechas
-                var startDate = moment();
+            if (this.is_fecha_pago && this.frecuencia_pagos === 'Mensual') {
+                // Días entre desembolso y primera cuota personalizada
+                var startDate = moment(fechaBase);
                 var endDate = moment(this.fecha_de_pago_cuota);
-
-                // Calcula la diferencia en días
                 var differenceInDays = endDate.diff(startDate, 'days');
-                var dias_antes_cuota = differenceInDays + 1
+                var dias_antes_cuota = differenceInDays + 1;
 
                 var monto_interes_mes = this.monto_credito * this.interes / 100;
                 var monto_por_dia = monto_interes_mes / 30;
                 var monto_del_intervalo = monto_por_dia * dias_antes_cuota;
-
-                // console.log(this.cronograma[this.cronograma.length - 1].fechaVencimiento);
-
-                // var fecha_ultima_cuota = moment(this.cronograma[this.cronograma.length - 1].fechaVencimiento, "DD/MM/YYYY");
-
-                // var fechaVencimiento = fecha_ultima_cuota.clone().add(1, 'months');
-
-                // // Si la fecha de vencimiento cae en domingo (0), ajustar al siguiente día
-                // if (fechaVencimiento.day() === 0) {
-                //     fechaVencimiento.add(1, 'days');
-                // }
-
-
-                // console.log(fechaVencimiento);
 
                 this.d_t = this.d_t + monto_del_intervalo;
 
@@ -1501,7 +1557,6 @@ export default {
                 };
 
                 this.cronograma.unshift(pago);
-
             }
 
             this.valitation_add_prestamo();
@@ -1673,15 +1728,8 @@ export default {
 
         this.valitation_add_prestamo();
 
-        // configurar fechas para poder ponerlo en el rango permitido de la programacion de la cuota
-
-        var fecha_actual = moment();
-        var fechas_mas_veinte = moment().add(20, 'days');
-
-        this.rango_maximo = {
-            to: new Date(fecha_actual.format("Y"), fecha_actual.format("M") - 1, fecha_actual.format("DD")),
-            from: new Date(fechas_mas_veinte.format("Y"), fechas_mas_veinte.format("M") - 1, fechas_mas_veinte.format("DD"))
-        }
+        // Rango de fecha de primera cuota: hasta 20 días desde el desembolso
+        this.actualizarRangoFechaCuota();
 
         this.select_cliente = new TomSelect(this.$refs.select_cliente, {
             valueField: 'urlapi',

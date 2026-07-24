@@ -147,10 +147,10 @@ export const myMixin = {
             var cuota = (montoPrestamo * tasaInteresMensual * Math.pow(1 + tasaInteresMensual, plazoMeses)) /
                 (Math.pow(1 + tasaInteresMensual, plazoMeses) - 1)
 
-            if(fecha == "hoy"){
+            if (fecha == "hoy") {
                 this.fecha_desembolso = moment().format("DD/M/YYYY");
-            }else{
-                this.fecha_desembolso = moment().format("DD/M/YYYY");
+            } else {
+                this.fecha_desembolso = moment(fecha).format("DD/M/YYYY");
             }
 
             this.cuotas = this.redondear(cuota);
@@ -264,9 +264,7 @@ export const myMixin = {
         calcularAmortizacionFrancesSemanal(montoPrestamo, plazoSemanas, tasaInteresSemanal,fecha = "hoy") { 
             const cuotaSemanal = ((montoPrestamo * parseFloat(tasaInteresSemanal / 100)) + montoPrestamo) / plazoSemanas;
             const fechaDesembolso =  fecha == "hoy" ? moment().format("DD/M/YYYY") : moment(fecha).format("DD/M/YYYY");
-            if(fecha == "hoy"){
-                this.fecha_desembolso = moment().format("DD/M/YYYY");
-            }
+            this.fecha_desembolso = fechaDesembolso;
             const interesSemanal = (montoPrestamo * (tasaInteresSemanal / 100)) / plazoSemanas;
             const amortizacionSemanal = cuotaSemanal - interesSemanal;
 
@@ -313,10 +311,7 @@ export const myMixin = {
         calcularAmortizacionFrancesQuincenal(montoPrestamo, plazoQuincenas, tasaInteres, fecha = "hoy") {
             const cuotaQuincenal = ((montoPrestamo * parseFloat(tasaInteres / 100)) + montoPrestamo) / plazoQuincenas;
             const fechaDesembolso = fecha == "hoy" ? moment().format("DD/M/YYYY") : moment(fecha).format("DD/M/YYYY");
-
-            if (fecha == "hoy") {
-                this.fecha_desembolso = moment().format("DD/M/YYYY");
-            }
+            this.fecha_desembolso = fechaDesembolso;
 
             const interesQuincenal = (montoPrestamo * (tasaInteres / 100)) / plazoQuincenas;
             const amortizacionQuincenal = cuotaQuincenal - interesQuincenal;
@@ -358,8 +353,10 @@ export const myMixin = {
         calcularAmortizacionFrancesdiario(montoPrestamo, plazoDias, tasaInteresDiaria,fecha = "hoy") {
 
              const cuotaDiaria = ((montoPrestamo * (tasaInteresDiaria / 100)) + montoPrestamo) / plazoDias;
-            if(fecha == "hoy"){
+            if (fecha == "hoy") {
                 this.fecha_desembolso = moment().format("DD/M/YYYY");
+            } else {
+                this.fecha_desembolso = moment(fecha).format("DD/M/YYYY");
             }
             this.cuotas = this.redondear(cuotaDiaria);
             this.tasa_diaria = (tasaInteresDiaria / 30).toFixed(2);
@@ -460,6 +457,7 @@ export const myMixin = {
         
             const cuotaSemanal = ((montoPrestamo * parseFloat(tasaInteresSemanal / 100)) + montoPrestamo) / plazoSemanas;
             const fechaDesembolso = moment(fecha).format("DD/M/YYYY");
+            this.fecha_desembolso = fechaDesembolso;
 
             const interesSemanal = (montoPrestamo * (tasaInteresSemanal / 100)) / plazoSemanas;
             const amortizacionSemanal = cuotaSemanal - interesSemanal;
