@@ -632,8 +632,43 @@ class PrestamoController extends Controller
 
             $cronograma = cronograma::where("prestamo_id", Encryptor::decrypt($Params["urlapi"]))->get();
 
-
             if ($cronograma) {
+                // Completar mora realmente cobrada (sin tumbar la carga si falla el join de comisión)
+                try {
+                    $ids = $cronograma->pluck('cronograma_id')->filter()->values()->all();
+                    $moraPorComision = collect();
+                    if (count($ids) > 0 && \Illuminate\Support\Facades\Schema::hasColumn('comision_detalle', 'mora_pagada')) {
+                        $moraPorComision = \App\Models\comision_detalle::whereIn('cronograma_id', $ids)
+                            ->get()
+                            ->groupBy('cronograma_id')
+                            ->map(fn ($rows) => (float) $rows->sum('mora_pagada'));
+                    }
+
+                    $cronograma->transform(function ($c) use ($moraPorComision) {
+                        $moraReal = null;
+                        if ($c->yes_pago === 'Y') {
+                            if ($moraPorComision->has($c->cronograma_id)) {
+                                $moraReal = (float) $moraPorComision->get($c->cronograma_id);
+                            } else {
+                                $moraReal = (float) ($c->monto_mora ?? 0);
+                            }
+                        }
+                        $c->setAttribute('mora_pagada', $moraReal);
+
+                        return $c;
+                    });
+                } catch (\Throwable $e) {
+                    Log::warning('get_cuotas mora_pagada: ' . $e->getMessage());
+                    $cronograma->transform(function ($c) {
+                        $c->setAttribute(
+                            'mora_pagada',
+                            $c->yes_pago === 'Y' ? (float) ($c->monto_mora ?? 0) : null
+                        );
+
+                        return $c;
+                    });
+                }
+
                 return response()->json([
                     'message' => 'datos cargados exitosamente',
                     'error' => '',
@@ -754,14 +789,23 @@ class PrestamoController extends Controller
                 $cronograma = cronograma::find(Encryptor::decrypt($Params["urlapi"]));
 
                 $cronograma->yes_mora = $Params["yes_mora"];
-                $cronograma->monto_mora = $Params["yes_mora"] == "Y" ? $cronograma->interes : 0;
+
+                // Mora automática: (interés/30) * días de atraso (máx. 30). Cero si se desactiva.
+                if ($Params["yes_mora"] == "Y") {
+                    $cronograma->monto_mora = app(ComisionService::class)->calcularMoraAutomatica($cronograma);
+                } else {
+                    $cronograma->monto_mora = 0;
+                }
 
                 if ($cronograma->save()) {
                     return response()->json([
                         'message' => $cronograma->yes_mora == "Y" ? 'Esta cuota se cobrara mora' : 'Esta cuota no se cobrara mora',
                         'error' => '',
                         'success' => true,
-                        'data' => $cronograma
+                        'data' => $cronograma,
+                        'interes' => (float) $cronograma->interes,
+                        'monto_mora' => (float) $cronograma->monto_mora,
+                        'yes_mora' => $cronograma->yes_mora,
                     ]);
                 } else {
                     return response()->json([
@@ -908,15 +952,49 @@ class PrestamoController extends Controller
                     }
                 ])->find($ingreso->ingreso_id);
 
-                $cronograma_id = Encryptor::decrypt($p_g["urlapi"]);
-
-                $actualiza_cronograma = cronograma::find($cronograma_id);
-
-          
+                $detalle_ingresos = [];
+                $ultimoCronograma = null;
+                $comisionService = app(ComisionService::class);
 
                 foreach ($Params["pago_grupal"] as $p_g) {
+                    try {
+                        $cronograma_id = Encryptor::decrypt($p_g["urlapi"]);
+                    } catch (\Throwable) {
+                        continue;
+                    }
+
+                    $actualiza_cronograma = cronograma::find($cronograma_id);
+                    if (!$actualiza_cronograma) {
+                        continue;
+                    }
+
+                    $yesMora = (($p_g["yes_mora"] ?? $actualiza_cronograma->yes_mora) === "Y") ? "Y" : "N";
+                    $moraPagada = 0.0;
+                    if ($yesMora === "Y") {
+                        if (array_key_exists("monto_mora_cobrar", $p_g) && $p_g["monto_mora_cobrar"] !== null && $p_g["monto_mora_cobrar"] !== "") {
+                            $moraPagada = max(0.0, round((float) $p_g["monto_mora_cobrar"], 2));
+                        } elseif (array_key_exists("mora_calculada", $p_g) && $p_g["mora_calculada"] !== null && $p_g["mora_calculada"] !== "") {
+                            $moraPagada = max(0.0, round((float) $p_g["mora_calculada"], 2));
+                        } else {
+                            $moraPagada = $comisionService->calcularMoraAutomatica($actualiza_cronograma);
+                        }
+                    }
 
                     $actualiza_cronograma->yes_pago = "Y";
+                    if ($yesMora === "Y") {
+                        $actualiza_cronograma->yes_mora = "Y";
+                    }
+                    // Mora realmente cobrada en este pago (personalizada o automática)
+                    $actualiza_cronograma->monto_mora = $moraPagada;
+                    $actualiza_cronograma->save();
+                    $ultimoCronograma = $actualiza_cronograma;
+
+                    $descripcionCuota = "Pago cuota {$p_g["periodo"]} de la solicitud n° {$Params['get_prestamo']['solicitud']['code']}";
+                    if ($moraPagada > 0) {
+                        $descripcionCuota .= " — mora pagada S/ " . number_format($moraPagada, 2, '.', '');
+                    }
+
+                    $montoLinea = round((float) ($p_g["cuota"] ?? $actualiza_cronograma->cuota) + $moraPagada, 2);
 
                     $detalle_ingresos[] = [
                         "ingreso_id" => $ingreso->ingreso_id,
@@ -925,22 +1003,19 @@ class PrestamoController extends Controller
                         "updated_at" => Carbon::now(),
                         "created_user" => auth()->user()->id,
                         "sucursal_id" => auth()->user()->sucursal_id,
-                        "yes_mora" => "N",
-                        "descripcion"  => "Pago cuota {$p_g["periodo"]} de la solicitud n° {$Params['get_prestamo']['solicitud']['code']}",
-                        "monto"  => $ingreso->monto,
-                        "cuota_cancelada" => "Y"
+                        "yes_mora" => $yesMora,
+                        "descripcion" => $descripcionCuota,
+                        "monto" => $montoLinea,
+                        "cuota_cancelada" => "Y",
                     ];
-
-                    $actualiza_cronograma->save();
                 }
 
-                $detalle_ingreso = detalle_ingreso::insert($detalle_ingresos);
+                $detalle_ingreso = count($detalle_ingresos) ? detalle_ingreso::insert($detalle_ingresos) : false;
                 $prestamo = Prestamo::find($ingreso->prestamo_id);
 
-                $periodo = cronograma::where("prestamo_id",  $prestamo->prestamo_id)->orderBy("periodo", "Desc")->first()->periodo;
+                $periodo = cronograma::where("prestamo_id", $prestamo->prestamo_id)->orderBy("periodo", "Desc")->first()->periodo;
 
-
-                if ($periodo == $actualiza_cronograma->periodo) {
+                if ($ultimoCronograma && $periodo == $ultimoCronograma->periodo) {
                     $prestamo->status = "C";
                     $prestamo->save();
                 }

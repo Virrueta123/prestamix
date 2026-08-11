@@ -19,7 +19,7 @@
                                 <th class="whitespace-nowrap">Cuota</th>
                                 <th class="whitespace-nowrap">Monto cancelado</th>
                                 <th class="whitespace-nowrap">Saldo</th>
-                                <th class="whitespace-nowrap">Mora</th>
+                                <th class="whitespace-nowrap">Mora (calc. / pagada)</th>
                                 <th class="whitespace-nowrap">Estado</th>
                                 <th class="whitespace-nowrap">Cobrar mora</th>
                                 <th class="whitespace-nowrap no_mostrar_print">Cobrar interes</th>
@@ -839,65 +839,63 @@ export default {
                         {
                             "data": "monto_mora",
                             render: function (data, type, row) {
+                                // Formato seguro: redondear() a veces devuelve string (toFixed), no llamar .toFixed encima
+                                const fmt = function (n) {
+                                    const v = parseFloat(n);
+                                    if (Number.isNaN(v)) return '0.00';
+                                    return (Math.round(v * 100) / 100).toFixed(2);
+                                };
 
-                                if (row.yes_pago == "N") {
-
-                                    switch (row.yes_mora) {
-                                        case "N":
-                                            const fechaDada = moment(row.fechaVencimiento);
-                                            const fechaActual = moment();
-                                            // Comparar la fecha actual con la fecha dada 
-                                            if (fechaDada.isBefore(fechaActual, 'day')) {
-                                                var diferencia = fechaActual.diff(fechaDada, 'days');
-
-                                                self.check_mora("Y", row.urlapi);
-                                                row.yes_mora = "Y";
-                                                row.monto_mora = row.interes;
-
-                                                var interes_by_days = row.interes / 30;
-
-                                                var interes_cuota_actual = 0;
-
-                                                if (diferencia >= 30) {
-                                                    interes_cuota_actual = interes_by_days * 30;
-                                                } else {
-                                                    interes_cuota_actual = interes_by_days * diferencia;
-                                                }
-
-                                                return `<div "> ${self.redondear(interes_cuota_actual)} </div>`;
-
-                                            } else if (fechaDada.isSame(fechaActual, 'day')) {
-                                                return `<div "> NO </div>`;
-                                            } else {
-                                                return `<div "> NO </div>`;
-                                            }
-                                            break;
-
-                                        case "Y":
-                                            const fecha_vencimiento = moment(row.fechaVencimiento);
-                                            const fecha_actual = moment();
-
-                                            var diferencia = fecha_actual.diff(fecha_vencimiento, 'days');
-
-                                            var interes_by_days = row.interes / 30;
-
-                                            var interes_cuota_actual = 0;
-
-                                            if (diferencia >= 30) {
-                                                interes_cuota_actual = interes_by_days * 30;
-                                            } else {
-                                                interes_cuota_actual = interes_by_days * diferencia;
-                                            }
-
-                                            return `<div "> ${self.redondear(interes_cuota_actual)} </div>`;
-                                            break;
-
-                                        case "S":
-                                            return `<div "> 0 </div>`;
-                                            break;
+                                // Cuota ya pagada: mostrar mora realmente cobrada
+                                if (row.yes_pago == "Y") {
+                                    let moraPagada = row.mora_pagada;
+                                    if (moraPagada === null || moraPagada === undefined || moraPagada === '') {
+                                        moraPagada = row.monto_mora;
                                     }
-                                } else {
-                                    return `<div "> Pagado </div>`;
+                                    moraPagada = parseFloat(moraPagada);
+                                    if (Number.isNaN(moraPagada)) moraPagada = 0;
+
+                                    if (moraPagada > 0) {
+                                        return '<div>S/ ' + fmt(moraPagada) + ' <small class="text-muted">(pagada)</small></div>';
+                                    }
+                                    if (row.yes_mora === 'Y') {
+                                        return '<div>S/ 0.00 <small class="text-muted">(sin cobro)</small></div>';
+                                    }
+                                    return '<div>S/ 0.00</div>';
+                                }
+
+                                // Cuota pendiente: mora automática o estado
+                                switch (row.yes_mora) {
+                                    case "N": {
+                                        const fechaDada = moment(row.fechaVencimiento);
+                                        const fechaActual = moment();
+                                        if (fechaDada.isBefore(fechaActual, 'day')) {
+                                            var diferencia = fechaActual.diff(fechaDada, 'days');
+                                            self.check_mora("Y", row.urlapi);
+                                            row.yes_mora = "Y";
+                                            var interes_by_days = row.interes / 30;
+                                            var interes_cuota_actual = diferencia >= 30
+                                                ? interes_by_days * 30
+                                                : interes_by_days * diferencia;
+                                            row.monto_mora = Math.round(interes_cuota_actual * 100) / 100;
+                                            return '<div>' + fmt(interes_cuota_actual) + '</div>';
+                                        }
+                                        return '<div>NO</div>';
+                                    }
+                                    case "Y": {
+                                        const fecha_vencimiento = moment(row.fechaVencimiento);
+                                        const fecha_actual = moment();
+                                        var diferenciaY = Math.max(0, fecha_actual.diff(fecha_vencimiento, 'days'));
+                                        var interes_by_days_y = row.interes / 30;
+                                        var moraCalc = diferenciaY >= 30
+                                            ? interes_by_days_y * 30
+                                            : interes_by_days_y * diferenciaY;
+                                        return '<div>' + fmt(moraCalc) + '</div>';
+                                    }
+                                    case "S":
+                                        return '<div>0.00</div>';
+                                    default:
+                                        return '<div>0.00</div>';
                                 }
                             }
                         },
@@ -1051,12 +1049,26 @@ export default {
                     var data = self.tabla_cronograma.row(index).data();
 
                     if (isChecked) {
-                        self.pago_grupal.push(data)
+                        // Inicializar mora calculada y personalizable al seleccionar cuota
+                        const item = { ...data };
+                        if (item.yes_mora === 'Y') {
+                            const fechaDada = moment(item.fechaVencimiento);
+                            const fechaActual = moment();
+                            let moraCalc = 0;
+                            if (fechaDada.isBefore(fechaActual, 'day')) {
+                                const dias = Math.min(30, fechaActual.diff(fechaDada, 'days'));
+                                moraCalc = self.redondear((parseFloat(item.interes) / 30) * dias);
+                            }
+                            item.mora_calculada = moraCalc;
+                            item.monto_mora_cobrar = moraCalc;
+                            item.monto_mora = moraCalc;
+                        } else {
+                            item.mora_calculada = 0;
+                            item.monto_mora_cobrar = 0;
+                        }
+                        self.pago_grupal.push(item);
                     } else {
-
                         let index = self.pago_grupal.findIndex(item => item.urlapi === data.urlapi);
-
-                        // Si el elemento existe, elimínalo
                         if (index !== -1) {
                             self.pago_grupal.splice(index, 1);
                         }
@@ -1071,25 +1083,29 @@ export default {
 
                     if (isChecked) {
                         self.check_mora("Y", data.urlapi).then((response) => {
-                            var rowData = self.tabla_cronograma.row(index).data(); // Datos de la fila seleccionada 
+                            var rowData = self.tabla_cronograma.row(index).data();
 
-                            rowData.monto_mora = response.interes;
-                            rowData.yes_mora = response.yes_mora;
-                            self.tabla_cronograma.row(index).data(rowData)
+                            // check_mora devuelve el cronograma; monto_mora = cálculo automático
+                            rowData.monto_mora = response?.monto_mora ?? 0;
+                            rowData.yes_mora = response?.yes_mora ?? 'Y';
+                            rowData.mora_calculada = rowData.monto_mora;
+                            rowData.monto_mora_cobrar = rowData.monto_mora;
+                            self.tabla_cronograma.row(index).data(rowData);
                             self.loading_end();
                         }).catch((err) => {
                             console.log(err);
                         });
                     } else {
                         self.check_mora("S", data.urlapi).then((response) => {
-
-                            var rowData = self.tabla_cronograma.row(index).data(); // Datos de la fila seleccionada
+                            var rowData = self.tabla_cronograma.row(index).data();
 
                             rowData.monto_mora = 0;
-                            rowData.yes_mora = response.yes_mora;
+                            rowData.yes_mora = response?.yes_mora ?? 'S';
+                            rowData.mora_calculada = 0;
+                            rowData.monto_mora_cobrar = 0;
 
-                            self.tabla_cronograma.row(index).data(rowData)
-                            self.loading_end(); // Cambia el valor de la columna "Nombre" 
+                            self.tabla_cronograma.row(index).data(rowData);
+                            self.loading_end();
                         }).catch((err) => {
                             console.log(err);
                         });

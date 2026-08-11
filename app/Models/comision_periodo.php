@@ -16,6 +16,7 @@ class comision_periodo extends Model
         'anio',
         'mes',
         'monto_interes_pagado',
+        'monto_mora_pagada',
         'monto_acumulado',
         'status',
         'gastos_id',
@@ -25,6 +26,7 @@ class comision_periodo extends Model
 
     protected $casts = [
         'monto_interes_pagado' => 'decimal:2',
+        'monto_mora_pagada' => 'decimal:2',
         'monto_acumulado' => 'decimal:2',
         'fecha_procesado' => 'datetime',
     ];

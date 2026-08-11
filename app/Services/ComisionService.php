@@ -49,12 +49,38 @@ class ComisionService
         return (int) ($adelantos->tipo_gasto_id ?? 6);
     }
 
-    public function calcularComision(float $interesPagado): float
+    public function calcularComision(float $basePagada): float
     {
-        return round($interesPagado * $this->porcentajeDecimal(), 2);
+        return round($basePagada * $this->porcentajeDecimal(), 2);
     }
 
-    public function calcularInteresPagado(array $pagoGrupalItem, cronograma $cronograma): float
+    /**
+     * Mora automática: (interés / 30) * min(días atraso, 30).
+     * Solo si la cuota está vencida y se cobra mora.
+     */
+    public function calcularMoraAutomatica(cronograma $cronograma, ?Carbon $fecha = null): float
+    {
+        $interes = (float) $cronograma->interes;
+        if ($interes <= 0) {
+            return 0.0;
+        }
+
+        $vencimiento = Carbon::parse($cronograma->fechaVencimiento)->startOfDay();
+        $hoy = ($fecha ?? Carbon::today())->startOfDay();
+
+        if ($hoy->lte($vencimiento)) {
+            return 0.0;
+        }
+
+        $dias = min(30, $vencimiento->diffInDays($hoy));
+
+        return round(($interes / 30) * $dias, 2);
+    }
+
+    /**
+     * Interés base de la cuota (sin mora).
+     */
+    public function calcularInteresBase(array $pagoGrupalItem, cronograma $cronograma): float
     {
         $yesInteres = ($pagoGrupalItem['yes_interes'] ?? $cronograma->yes_interes) === 'Y';
 
@@ -62,18 +88,69 @@ class ComisionService
             return 0.0;
         }
 
-        $interes = (float) $cronograma->interes;
+        return round((float) $cronograma->interes, 2);
+    }
 
-        if (($pagoGrupalItem['yes_mora'] ?? 'N') === 'Y' && $interes > 0) {
-            $vencimiento = Carbon::parse($cronograma->fechaVencimiento)->startOfDay();
-            $hoy = Carbon::today();
-            if ($hoy->gt($vencimiento)) {
-                $dias = min(30, $vencimiento->diffInDays($hoy));
-                $interes += ((float) $cronograma->interes / 30) * $dias;
-            }
+    /**
+     * Mora a cobrar en el pago.
+     * Prioridad: monto personalizado del front (monto_mora_cobrar) → cálculo automático si yes_mora = Y.
+     */
+    public function calcularMoraPagada(array $pagoGrupalItem, cronograma $cronograma, ?Carbon $fecha = null): float
+    {
+        $yesMora = ($pagoGrupalItem['yes_mora'] ?? $cronograma->yes_mora ?? 'N');
+
+        if ($yesMora !== 'Y') {
+            return 0.0;
         }
 
-        return round($interes, 2);
+        if (array_key_exists('monto_mora_cobrar', $pagoGrupalItem)
+            && $pagoGrupalItem['monto_mora_cobrar'] !== null
+            && $pagoGrupalItem['monto_mora_cobrar'] !== ''
+        ) {
+            return max(0.0, round((float) $pagoGrupalItem['monto_mora_cobrar'], 2));
+        }
+
+        if (array_key_exists('mora_calculada', $pagoGrupalItem)
+            && $pagoGrupalItem['mora_calculada'] !== null
+            && $pagoGrupalItem['mora_calculada'] !== ''
+        ) {
+            return max(0.0, round((float) $pagoGrupalItem['mora_calculada'], 2));
+        }
+
+        return $this->calcularMoraAutomatica($cronograma, $fecha);
+    }
+
+    /**
+     * Base total para comisión = interés + mora (compatibilidad con código que sumaba ambos en "interes").
+     */
+    public function calcularInteresPagado(array $pagoGrupalItem, cronograma $cronograma): float
+    {
+        $interes = $this->calcularInteresBase($pagoGrupalItem, $cronograma);
+        $mora = $this->calcularMoraPagada($pagoGrupalItem, $cronograma);
+
+        return round($interes + $mora, 2);
+    }
+
+    /**
+     * Desglose: interés, mora y comisiones por separado.
+     *
+     * @return array{interes: float, mora: float, base: float, comision_interes: float, comision_mora: float, comision_total: float}
+     */
+    public function desgloseComisionCuota(array $pagoGrupalItem, cronograma $cronograma, ?Carbon $fecha = null): array
+    {
+        $interes = $this->calcularInteresBase($pagoGrupalItem, $cronograma);
+        $mora = $this->calcularMoraPagada($pagoGrupalItem, $cronograma, $fecha);
+        $comisionInteres = $this->calcularComision($interes);
+        $comisionMora = $this->calcularComision($mora);
+
+        return [
+            'interes' => $interes,
+            'mora' => $mora,
+            'base' => round($interes + $mora, 2),
+            'comision_interes' => $comisionInteres,
+            'comision_mora' => $comisionMora,
+            'comision_total' => round($comisionInteres + $comisionMora, 2),
+        ];
     }
 
     public function acumularDesdePagoGrupal(
@@ -100,9 +177,15 @@ class ComisionService
                 continue;
             }
 
-            $interesPagado = $this->calcularInteresPagado($item, $cronograma);
-            if ($interesPagado <= 0) {
+            $desglose = $this->desgloseComisionCuota($item, $cronograma, $fecha);
+            if ($desglose['base'] <= 0) {
                 continue;
+            }
+
+            // Persistir mora cobrada en el cronograma (monto personalizado o automático)
+            if (($item['yes_mora'] ?? $cronograma->yes_mora) === 'Y') {
+                $cronograma->monto_mora = $desglose['mora'];
+                $cronograma->save();
             }
 
             $this->registrarLinea(
@@ -113,8 +196,9 @@ class ComisionService
                 null,
                 (int) $cronograma->cronograma_id,
                 (int) $prestamo->prestamo_id,
-                $interesPagado,
-                'Cuota período ' . ($item['periodo'] ?? $cronograma->periodo) . ' — Préstamo ' . $prestamo->code
+                $desglose['interes'],
+                'Cuota período ' . ($item['periodo'] ?? $cronograma->periodo) . ' — Préstamo ' . $prestamo->code,
+                $desglose['mora']
             );
         }
     }
@@ -128,13 +212,18 @@ class ComisionService
         ?int $cronogramaId,
         ?int $prestamoId,
         float $interesPagado,
-        string $descripcion
+        string $descripcion,
+        float $moraPagada = 0.0
     ): ?comision_detalle {
-        if ($interesPagado <= 0) {
+        $interesPagado = round($interesPagado, 2);
+        $moraPagada = max(0.0, round($moraPagada, 2));
+        $base = round($interesPagado + $moraPagada, 2);
+
+        if ($base <= 0) {
             return null;
         }
 
-        $comisionMonto = $this->calcularComision($interesPagado);
+        $comisionMonto = $this->calcularComision($base);
         $periodo = $this->obtenerOCrearPeriodoPendiente($trabajadorId, $sucursalId, $fecha);
         $anio = (int) $fecha->format('Y');
         $mes = (int) $fecha->format('n');
@@ -150,11 +239,13 @@ class ComisionService
             'cronograma_id' => $cronogramaId,
             'prestamo_id' => $prestamoId,
             'interes_pagado' => $interesPagado,
+            'mora_pagada' => $moraPagada,
             'comision_monto' => $comisionMonto,
             'descripcion' => $descripcion,
         ]);
 
         $periodo->monto_interes_pagado = round((float) $periodo->monto_interes_pagado + $interesPagado, 2);
+        $periodo->monto_mora_pagada = round((float) ($periodo->monto_mora_pagada ?? 0) + $moraPagada, 2);
         $periodo->monto_acumulado = round((float) $periodo->monto_acumulado + $comisionMonto, 2);
         $periodo->save();
 
@@ -182,6 +273,7 @@ class ComisionService
             'anio' => $anio,
             'mes' => $mes,
             'monto_interes_pagado' => 0,
+            'monto_mora_pagada' => 0,
             'monto_acumulado' => 0,
             'status' => 'P',
         ]);
@@ -426,6 +518,7 @@ class ComisionService
             $periodo = comision_periodo::find($detalle->comision_periodo_id);
             if ($periodo && $periodo->status === 'P') {
                 $periodo->monto_interes_pagado = max(0, round((float) $periodo->monto_interes_pagado - (float) $detalle->interes_pagado, 2));
+                $periodo->monto_mora_pagada = max(0, round((float) ($periodo->monto_mora_pagada ?? 0) - (float) ($detalle->mora_pagada ?? 0), 2));
                 $periodo->monto_acumulado = max(0, round((float) $periodo->monto_acumulado - (float) $detalle->comision_monto, 2));
                 $periodo->save();
             }
@@ -435,6 +528,7 @@ class ComisionService
 
     /**
      * Recalcula comisión de cada línea con el % vigente y actualiza totales del período.
+     * Comisión = % sobre (interés + mora) de cada línea.
      */
     public function recalcularPeriodo(comision_periodo $periodo): array
     {
@@ -445,15 +539,17 @@ class ComisionService
         $this->deduplicarDetallesPeriodo($periodo);
         $periodo = $periodo->fresh();
 
-        $pctDecimal = $this->porcentajeDecimal();
         $detalles = comision_detalle::where('comision_periodo_id', $periodo->comision_periodo_id)->get();
 
         $totalInteres = 0.0;
+        $totalMora = 0.0;
         $totalComision = 0.0;
 
         foreach ($detalles as $detalle) {
             $interes = round((float) $detalle->interes_pagado, 2);
-            $comision = $this->calcularComision($interes);
+            $mora = round((float) ($detalle->mora_pagada ?? 0), 2);
+            $base = round($interes + $mora, 2);
+            $comision = $this->calcularComision($base);
 
             if ((float) $detalle->comision_monto !== $comision) {
                 $detalle->comision_monto = $comision;
@@ -461,10 +557,12 @@ class ComisionService
             }
 
             $totalInteres += $interes;
+            $totalMora += $mora;
             $totalComision += $comision;
         }
 
         $periodo->monto_interes_pagado = round($totalInteres, 2);
+        $periodo->monto_mora_pagada = round($totalMora, 2);
         $periodo->monto_acumulado = round($totalComision, 2);
         $periodo->save();
 
@@ -496,6 +594,9 @@ class ComisionService
                     'cliente_nombre' => $linea['cliente_nombre'],
                     'cuotas' => 0,
                     'interes_total' => 0.0,
+                    'mora_total' => 0.0,
+                    'comision_interes_total' => 0.0,
+                    'comision_mora_total' => 0.0,
                     'comision_total' => 0.0,
                     'porcentaje' => $pct,
                     'lineas' => [],
@@ -503,11 +604,20 @@ class ComisionService
             }
             $agrupado[$key]['cuotas']++;
             $agrupado[$key]['interes_total'] = round($agrupado[$key]['interes_total'] + (float) $linea['interes_pagado'], 2);
+            $agrupado[$key]['mora_total'] = round($agrupado[$key]['mora_total'] + (float) $linea['mora_pagada'], 2);
+            $agrupado[$key]['comision_interes_total'] = round($agrupado[$key]['comision_interes_total'] + (float) $linea['comision_interes'], 2);
+            $agrupado[$key]['comision_mora_total'] = round($agrupado[$key]['comision_mora_total'] + (float) $linea['comision_mora'], 2);
             $agrupado[$key]['comision_total'] = round($agrupado[$key]['comision_total'] + (float) $linea['comision_monto'], 2);
             $agrupado[$key]['lineas'][] = $linea;
         }
 
         $porPrestamo = array_values($agrupado);
+
+        $totalMora = round((float) ($periodo->monto_mora_pagada ?? 0), 2);
+        $totalInteres = round((float) $periodo->monto_interes_pagado, 2);
+        $totalComision = round((float) $periodo->monto_acumulado, 2);
+        $comisionInteres = $this->calcularComision($totalInteres);
+        $comisionMora = $this->calcularComision($totalMora);
 
         return [
             'periodo' => $periodo,
@@ -517,8 +627,12 @@ class ComisionService
             'totales' => [
                 'cuotas' => $lineas->count(),
                 'prestamos' => count($porPrestamo),
-                'interes' => round((float) $periodo->monto_interes_pagado, 2),
-                'comision' => round((float) $periodo->monto_acumulado, 2),
+                'interes' => $totalInteres,
+                'mora' => $totalMora,
+                'base' => round($totalInteres + $totalMora, 2),
+                'comision_interes' => $comisionInteres,
+                'comision_mora' => $comisionMora,
+                'comision' => $totalComision,
                 'porcentaje' => $pct,
             ],
         ];
@@ -549,6 +663,11 @@ class ComisionService
             }
         }
 
+        $interes = (float) $detalle->interes_pagado;
+        $mora = (float) ($detalle->mora_pagada ?? 0);
+        $comisionInteres = $this->calcularComision($interes);
+        $comisionMora = $this->calcularComision($mora);
+
         return [
             'comision_detalle_id' => $detalle->comision_detalle_id,
             'prestamo_id' => $detalle->prestamo_id,
@@ -559,7 +678,11 @@ class ComisionService
             'planilla_url' => $planillaUrl,
             'cliente_nombre' => $clienteNombre,
             'descripcion' => $detalle->descripcion,
-            'interes_pagado' => (float) $detalle->interes_pagado,
+            'interes_pagado' => $interes,
+            'mora_pagada' => $mora,
+            'base_comision' => round($interes + $mora, 2),
+            'comision_interes' => $comisionInteres,
+            'comision_mora' => $comisionMora,
             'comision_monto' => (float) $detalle->comision_monto,
             'porcentaje' => $porcentaje,
             'created_at' => $detalle->created_at,

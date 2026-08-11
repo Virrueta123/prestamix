@@ -16,12 +16,14 @@ class comision_detalle extends Model
         'cronograma_id',
         'prestamo_id',
         'interes_pagado',
+        'mora_pagada',
         'comision_monto',
         'descripcion',
     ];
 
     protected $casts = [
         'interes_pagado' => 'decimal:2',
+        'mora_pagada' => 'decimal:2',
         'comision_monto' => 'decimal:2',
     ];
 

@@ -128,11 +128,19 @@
                             </div>
                             <div class="comision-kpi">
                                 <span class="comision-kpi__val">S/ {{ formatear_dinero_soles(sumaInteresDetalle) }}</span>
-                                <span class="comision-kpi__lbl">Interés cobrado</span>
+                                <span class="comision-kpi__lbl">Interés</span>
+                            </div>
+                            <div class="comision-kpi">
+                                <span class="comision-kpi__val">S/ {{ formatear_dinero_soles(sumaMoraDetalle) }}</span>
+                                <span class="comision-kpi__lbl">Mora</span>
                             </div>
                             <div class="comision-kpi comision-kpi--primary">
                                 <span class="comision-kpi__val">S/ {{ formatear_dinero_soles(sumaComisionDetalle) }}</span>
                                 <span class="comision-kpi__lbl">Cobrador {{ porcentaje }}%</span>
+                                <span class="comision-kpi__sub">
+                                    int {{ formatear_dinero_soles(sumaComisionInteresDetalle) }}
+                                    · mora {{ formatear_dinero_soles(sumaComisionMoraDetalle) }}
+                                </span>
                             </div>
                             <div class="comision-kpi comision-kpi--empresa">
                                 <span class="comision-kpi__val">S/ {{ formatear_dinero_soles(sumaEmpresaDetalle) }}</span>
@@ -154,12 +162,14 @@
                                     <div class="comision-prestamo__totals">
                                         <span>{{ grupo.cuotas }} cuota(s)</span>
                                         <span class="comision-prestamo__sep">·</span>
-                                        <span>Interés S/ {{ formatear_dinero_soles(grupo.interes_total) }}</span>
+                                        <span>Int. S/ {{ formatear_dinero_soles(grupo.interes_total) }}</span>
+                                        <span class="comision-prestamo__sep">·</span>
+                                        <span>Mora S/ {{ formatear_dinero_soles(grupo.mora_total || 0) }}</span>
                                         <span class="comision-prestamo__sep">·</span>
                                         <span class="comision-monto">Cobr. S/ {{ formatear_dinero_soles(grupo.comision_total) }}</span>
                                         <span class="comision-prestamo__sep">·</span>
                                         <span class="comision-monto comision-monto--empresa">
-                                            Emp. S/ {{ formatear_dinero_soles(empresaDeInteres(grupo.interes_total)) }}
+                                            Emp. S/ {{ formatear_dinero_soles(empresaDeBase(grupo.interes_total, grupo.mora_total || 0)) }}
                                         </span>
                                     </div>
                                     <a
@@ -178,8 +188,9 @@
                                         <tr>
                                             <th>Detalle</th>
                                             <th class="text-right">Interés</th>
-                                            <th class="text-right">Comisión ({{ porcentaje }}%)</th>
-                                            <th class="text-right">Empresa ({{ porcentajeEmpresa }}%)</th>
+                                            <th class="text-right">Mora</th>
+                                            <th class="text-right">Comisión</th>
+                                            <th class="text-right">Empresa</th>
                                             <th>Fecha</th>
                                         </tr>
                                     </thead>
@@ -187,12 +198,19 @@
                                         <tr v-for="linea in grupo.lineas" :key="linea.comision_detalle_id">
                                             <td class="text-sm">{{ linea.descripcion }}</td>
                                             <td class="text-right">S/ {{ formatear_dinero_soles(linea.interes_pagado) }}</td>
+                                            <td class="text-right">S/ {{ formatear_dinero_soles(linea.mora_pagada || 0) }}</td>
                                             <td class="text-right">
-                                                <span class="comision-monto">S/ {{ formatear_dinero_soles(linea.comision_monto) }}</span>
+                                                <div class="comision-split-cell">
+                                                    <span class="comision-monto">S/ {{ formatear_dinero_soles(linea.comision_monto) }}</span>
+                                                    <span class="comision-split-cell__sub">
+                                                        int {{ formatear_dinero_soles(linea.comision_interes ?? comisionDe(linea.interes_pagado)) }}
+                                                        · mora {{ formatear_dinero_soles(linea.comision_mora ?? comisionDe(linea.mora_pagada || 0)) }}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td class="text-right">
                                                 <span class="comision-monto comision-monto--empresa">
-                                                    S/ {{ formatear_dinero_soles(empresaDeInteres(linea.interes_pagado)) }}
+                                                    S/ {{ formatear_dinero_soles(empresaDeBase(linea.interes_pagado, linea.mora_pagada || 0)) }}
                                                 </span>
                                             </td>
                                             <td class="text-sm text-slate-500">{{ formatear_fecha(linea.created_at) }}</td>
@@ -213,8 +231,9 @@
                                             <th>Cliente</th>
                                             <th class="text-center">Cuotas</th>
                                             <th class="text-right">Interés</th>
-                                            <th class="text-right">Comisión ({{ porcentaje }}%)</th>
-                                            <th class="text-right">Empresa ({{ porcentajeEmpresa }}%)</th>
+                                            <th class="text-right">Mora</th>
+                                            <th class="text-right">Comisión</th>
+                                            <th class="text-right">Empresa</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -223,12 +242,19 @@
                                             <td class="text-sm">{{ g.cliente_nombre }}</td>
                                             <td class="text-center">{{ g.cuotas }}</td>
                                             <td class="text-right">S/ {{ formatear_dinero_soles(g.interes_total) }}</td>
+                                            <td class="text-right">S/ {{ formatear_dinero_soles(g.mora_total || 0) }}</td>
                                             <td class="text-right">
-                                                <span class="comision-monto">S/ {{ formatear_dinero_soles(g.comision_total) }}</span>
+                                                <div class="comision-split-cell">
+                                                    <span class="comision-monto">S/ {{ formatear_dinero_soles(g.comision_total) }}</span>
+                                                    <span class="comision-split-cell__sub">
+                                                        int {{ formatear_dinero_soles(g.comision_interes_total ?? comisionDe(g.interes_total)) }}
+                                                        · mora {{ formatear_dinero_soles(g.comision_mora_total ?? comisionDe(g.mora_total || 0)) }}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td class="text-right">
                                                 <span class="comision-monto comision-monto--empresa">
-                                                    S/ {{ formatear_dinero_soles(empresaDeInteres(g.interes_total)) }}
+                                                    S/ {{ formatear_dinero_soles(empresaDeBase(g.interes_total, g.mora_total || 0)) }}
                                                 </span>
                                             </td>
                                         </tr>
@@ -239,10 +265,19 @@
                                             <td class="text-right font-semibold">
                                                 S/ {{ formatear_dinero_soles(totalConfirmado ? totalInteresFinal : sumaInteresDetalle) }}
                                             </td>
+                                            <td class="text-right font-semibold">
+                                                S/ {{ formatear_dinero_soles(totalConfirmado ? totalMoraFinal : sumaMoraDetalle) }}
+                                            </td>
                                             <td class="text-right">
-                                                <span class="comision-checkout__total">
-                                                    S/ {{ formatear_dinero_soles(totalConfirmado ? totalComisionFinal : sumaComisionDetalle) }}
-                                                </span>
+                                                <div class="comision-split-cell">
+                                                    <span class="comision-checkout__total">
+                                                        S/ {{ formatear_dinero_soles(totalConfirmado ? totalComisionFinal : sumaComisionDetalle) }}
+                                                    </span>
+                                                    <span class="comision-split-cell__sub">
+                                                        int {{ formatear_dinero_soles(totalConfirmado ? totalComisionInteresFinal : sumaComisionInteresDetalle) }}
+                                                        · mora {{ formatear_dinero_soles(totalConfirmado ? totalComisionMoraFinal : sumaComisionMoraDetalle) }}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td class="text-right">
                                                 <span class="comision-monto comision-monto--empresa">
@@ -318,7 +353,11 @@
 <script>
 import Axios from 'axios';
 import { myMixin } from '../../mixin.js';
-import { porcentajeEmpresa, empresaDesdeInteres } from '../../utils/comisionHelper.js';
+import {
+    porcentajeEmpresa,
+    empresaDesdeInteres,
+    comisionDesdeInteres,
+} from '../../utils/comisionHelper.js';
 
 export default {
     mixins: [myMixin],
@@ -339,6 +378,9 @@ export default {
             totalConfirmado: false,
             totalComisionFinal: 0,
             totalInteresFinal: 0,
+            totalMoraFinal: 0,
+            totalComisionInteresFinal: 0,
+            totalComisionMoraFinal: 0,
             totalEmpresaFinal: 0,
             montoPago: 0,
             calculando: false,
@@ -373,12 +415,32 @@ export default {
             if (!this.resumen?.por_prestamo) return 0;
             return this.resumen.por_prestamo.reduce((s, g) => s + parseFloat(g.interes_total || 0), 0);
         },
+        sumaMoraDetalle() {
+            if (this.resumen?.totales?.mora != null) {
+                return parseFloat(this.resumen.totales.mora || 0);
+            }
+            if (!this.resumen?.por_prestamo) return 0;
+            return this.resumen.por_prestamo.reduce((s, g) => s + parseFloat(g.mora_total || 0), 0);
+        },
+        sumaComisionInteresDetalle() {
+            if (this.resumen?.totales?.comision_interes != null) {
+                return parseFloat(this.resumen.totales.comision_interes || 0);
+            }
+            return comisionDesdeInteres(this.sumaInteresDetalle, this.porcentaje);
+        },
+        sumaComisionMoraDetalle() {
+            if (this.resumen?.totales?.comision_mora != null) {
+                return parseFloat(this.resumen.totales.comision_mora || 0);
+            }
+            return comisionDesdeInteres(this.sumaMoraDetalle, this.porcentaje);
+        },
         sumaComisionDetalle() {
             if (!this.resumen?.por_prestamo) return 0;
             return this.resumen.por_prestamo.reduce((s, g) => s + parseFloat(g.comision_total || 0), 0);
         },
         sumaEmpresaDetalle() {
-            return Math.round((this.sumaInteresDetalle - this.sumaComisionDetalle) * 100) / 100;
+            const base = this.sumaInteresDetalle + this.sumaMoraDetalle;
+            return Math.round((base - this.sumaComisionDetalle) * 100) / 100;
         },
         montoAjustadoManual() {
             if (!this.totalConfirmado) return false;
@@ -389,11 +451,20 @@ export default {
         this.cargar();
     },
     methods: {
+        comisionDe(monto) {
+            return comisionDesdeInteres(monto, this.porcentaje);
+        },
         empresaDeInteres(interes) {
             return empresaDesdeInteres(interes, this.porcentaje);
         },
+        empresaDeBase(interes, mora = 0) {
+            const base = parseFloat(interes || 0) + parseFloat(mora || 0);
+            return empresaDesdeInteres(base, this.porcentaje);
+        },
         empresaDePeriodo(h) {
-            return empresaDesdeInteres(h.monto_interes_pagado, this.porcentaje);
+            const base =
+                parseFloat(h.monto_interes_pagado || 0) + parseFloat(h.monto_mora_pagada || 0);
+            return empresaDesdeInteres(base, this.porcentaje);
         },
         formatear_fecha(fecha) {
             if (!fecha) return '—';
@@ -403,6 +474,9 @@ export default {
             this.totalConfirmado = false;
             this.totalComisionFinal = 0;
             this.totalInteresFinal = 0;
+            this.totalMoraFinal = 0;
+            this.totalComisionInteresFinal = 0;
+            this.totalComisionMoraFinal = 0;
             this.totalEmpresaFinal = 0;
             this.montoPago = 0;
         },
@@ -421,7 +495,15 @@ export default {
                 this.totalConfirmado = true;
                 this.totalComisionFinal = parseFloat(data.totales.comision || 0);
                 this.totalInteresFinal = parseFloat(data.totales.interes || 0);
-                this.totalEmpresaFinal = Math.round((this.totalInteresFinal - this.totalComisionFinal) * 100) / 100;
+                this.totalMoraFinal = parseFloat(data.totales.mora || 0);
+                this.totalComisionInteresFinal = parseFloat(
+                    data.totales.comision_interes ?? comisionDesdeInteres(this.totalInteresFinal, this.porcentaje)
+                );
+                this.totalComisionMoraFinal = parseFloat(
+                    data.totales.comision_mora ?? comisionDesdeInteres(this.totalMoraFinal, this.porcentaje)
+                );
+                const base = this.totalInteresFinal + this.totalMoraFinal;
+                this.totalEmpresaFinal = Math.round((base - this.totalComisionFinal) * 100) / 100;
                 this.montoPago = this.totalComisionFinal;
             }
         },
@@ -774,6 +856,29 @@ export default {
     margin-top: 0.2rem;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+}
+
+.comision-kpi__sub {
+    display: block;
+    font-size: 0.65rem;
+    color: #64748b;
+    margin-top: 0.15rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.comision-split-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.05rem;
+}
+
+.comision-split-cell__sub {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    white-space: nowrap;
 }
 
 .comision-prestamos {
