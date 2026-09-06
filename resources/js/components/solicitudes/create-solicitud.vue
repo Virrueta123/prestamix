@@ -1827,6 +1827,15 @@ export default {
 .cliente-select-wrapper {
     position: relative;
     overflow: visible;
+    z-index: 20;
+}
+.cliente-select-wrapper .ts-wrapper,
+.cliente-select-wrapper .ts-control,
+.cliente-select-wrapper .ts-input {
+    height: auto !important;
+    min-height: 42px;
+    overflow: visible !important;
+    white-space: normal;
 }
 .cliente-dropdown-open {
     padding-bottom: 18rem;

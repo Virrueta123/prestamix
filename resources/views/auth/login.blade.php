@@ -38,7 +38,7 @@ License: You must have a valid license purchased only from themeforest(the above
             <!-- BEGIN: Login Info -->
             <div class="hidden xl:flex flex-col min-h-screen">
                 <a href="" class="-intro-x flex items-center pt-8 pl-8">
-                    <img alt="Horizon Finance" class="w-80 max-w-[85%]" src="{{ asset('images/logo_horizon.png') }}">
+                    <img alt="Horizon Finance" class="app-logo app-logo--login" src="{{ asset('images/logo_horizon.png') }}">
                 </a>
                 <div class="my-auto">
                     <img alt="Midone - HTML Admin Template" class="-intro-x w-1/2 -mt-16"

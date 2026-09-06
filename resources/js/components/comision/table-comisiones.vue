@@ -657,4 +657,34 @@ export default {
     display: block;
     color: #cbd5e1;
 }
+
+@media (max-width: 768px) {
+    .comision-hero,
+    .comision-toolbar {
+        padding: 1rem;
+    }
+    .comision-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .comision-hero__title {
+        font-size: 1.05rem;
+    }
+    .comision-card__head {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .comision-stats {
+        grid-template-columns: 1fr;
+    }
+    .comision-toolbar__filters {
+        width: 100%;
+    }
+    .comision-field,
+    .comision-field__input,
+    .comision-btn-refresh {
+        width: 100%;
+    }
+}
 </style>

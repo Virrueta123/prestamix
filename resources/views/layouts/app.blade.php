@@ -15,7 +15,7 @@ License: You must have a valid license purchased only from themeforest(the above
       <meta charset="utf-8">
       <meta name="csrf-token" content="{{ csrf_token() }}">
       <link href="{{ asset('images/isotipo_horizon.png') }}" rel="shortcut icon" type="image/png">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
       <meta name="description"
           content="Midone admin is super flexible, powerful, clean & modern responsive tailwind admin template with unlimited possibilities.">
       <meta name="keywords"
@@ -57,11 +57,13 @@ License: You must have a valid license purchased only from themeforest(the above
       <!-- BEGIN: Mobile Menu -->
       <div class="mobile-menu md:hidden">
           <div class="mobile-menu-bar">
-              <a href="" class="flex mr-auto pl-4">
-                  <img alt="Horizon Finance" class="w-44" src="{{ asset('images/logo_horizon.png') }}">
+              <span class="mobile-menu-bar__spacer" aria-hidden="true"></span>
+              <a href="{{ route('home') }}" class="app-logo-link app-logo-link--mobile">
+                  <img alt="Horizon Finance" class="app-logo app-logo--mobile" src="{{ asset('images/logo_horizon.png') }}">
               </a>
-              <a href="javascript:;" class="mobile-menu-toggler"> <i data-lucide="bar-chart-2"
-                      class="w-8 h-8 text-white transform -rotate-90"></i> </a>
+              <a href="javascript:;" class="mobile-menu-toggler" aria-label="Abrir menú">
+                  <i data-lucide="menu" class="w-7 h-7 text-white"></i>
+              </a>
           </div>
           <div class="scrollable">
               <a href="javascript:;" class="mobile-menu-toggler"> <i data-lucide="x-circle"
@@ -70,11 +72,11 @@ License: You must have a valid license purchased only from themeforest(the above
           </div>
       </div>
       <!-- END: Mobile Menu -->
-      <div class="flex mt-[4.7rem] md:mt-0">
+      <div class="flex app-shell">
           <!-- BEGIN: Side Menu -->
           <nav class="side-nav">
-              <a href="" class="intro-x flex items-center px-4 pt-5 w-full">
-                   <img alt="Horizon Finance" class="w-full max-w-[200px]" src="{{ asset('images/logo_horizon.png') }}">
+              <a href="{{ route('home') }}" class="intro-x app-logo-link app-logo-link--sidebar">
+                   <img alt="Horizon Finance" class="app-logo app-logo--sidebar" src="{{ asset('images/logo_horizon.png') }}">
               </a>
               <div class="side-nav__devider my-6"></div>
               @include('layouts.menu')
